@@ -1,0 +1,55 @@
+[
+    {
+        "product_id": "PERSONAL_FLEXI",
+        "product_name": "Personal Flexi Loan",
+        "description": "General-purpose unsecured personal loan for eligible salaried and self-employed applicants.",
+        "annual_interest_rate": 12.5,
+        "min_loan_amount": 50000,
+        "max_loan_amount": 1000000,
+        "min_tenure_months": 12,
+        "max_tenure_months": 60,
+        "min_credit_score": 700,
+        "max_foir_percent": 50,
+        "min_age": 21,
+        "max_age": 60,
+        "allowed_employment_types": [
+            "Salaried",
+            "Self-Employed"
+        ]
+    },
+    {
+        "product_id": "PERSONAL_PLUS",
+        "product_name": "Personal Plus Loan",
+        "description": "Higher-value unsecured loan intended for applicants with stronger credit and affordability profiles.",
+        "annual_interest_rate": 10.75,
+        "min_loan_amount": 200000,
+        "max_loan_amount": 2000000,
+        "min_tenure_months": 12,
+        "max_tenure_months": 72,
+        "min_credit_score": 750,
+        "max_foir_percent": 45,
+        "min_age": 25,
+        "max_age": 58,
+        "allowed_employment_types": [
+            "Salaried",
+            "Self-Employed"
+        ]
+    },
+    {
+        "product_id": "SALARIED_EXPRESS",
+        "product_name": "Salaried Express Loan",
+        "description": "Streamlined personal loan product designed specifically for salaried applicants.",
+        "annual_interest_rate": 11.25,
+        "min_loan_amount": 100000,
+        "max_loan_amount": 1500000,
+        "min_tenure_months": 12,
+        "max_tenure_months": 60,
+        "min_credit_score": 720,
+        "max_foir_percent": 48,
+        "min_age": 23,
+        "max_age": 58,
+        "allowed_employment_types": [
+            "Salaried"
+        ]
+    }
+]
