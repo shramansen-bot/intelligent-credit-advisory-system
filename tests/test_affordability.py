@@ -40,3 +40,5 @@ def test_calculate_max_affordable_emi():
     )
 
     assert result == 21500.0
+
+    

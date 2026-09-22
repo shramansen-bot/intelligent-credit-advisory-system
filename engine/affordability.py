@@ -58,28 +58,29 @@ def calculate_max_affordable_emi(
 # Temporary testing section
 # -----------------------------
 
-emi = calculate_emi(500000, 12, 60)
+if __name__ == "__main__":
+    emi = calculate_emi(500000, 12, 60)
 
-foir = calculate_foir(
-    monthly_net_income=72000,
-    existing_monthly_obligations=14500,
-    proposed_emi=emi
-)
+    foir = calculate_foir(
+        monthly_net_income=72000,
+        existing_monthly_obligations=14500,
+        proposed_emi=emi
+    )
 
-disposable_income = calculate_disposable_income(
-    monthly_net_income=72000,
-    monthly_expenses=26000,
-    existing_monthly_obligations=14500,
-    proposed_emi=emi
-)
+    disposable_income = calculate_disposable_income(
+        monthly_net_income=72000,
+        monthly_expenses=26000,
+        existing_monthly_obligations=14500,
+        proposed_emi=emi
+    )
 
-max_affordable_emi = calculate_max_affordable_emi(
-    monthly_net_income=72000,
-    existing_monthly_obligations=14500,
-    max_foir_percent=50
-)
+    max_affordable_emi = calculate_max_affordable_emi(
+        monthly_net_income=72000,
+        existing_monthly_obligations=14500,
+        max_foir_percent=50
+    )
 
-print("Monthly EMI:", emi)
-print("FOIR:", foir, "%")
-print("Disposable Income:", disposable_income)
-print("Maximum Affordable EMI:", max_affordable_emi)
+    print("Monthly EMI:", emi)
+    print("FOIR:", foir, "%")
+    print("Disposable Income:", disposable_income)
+    print("Maximum Affordable EMI:", max_affordable_emi)
