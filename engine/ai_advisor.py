@@ -4,49 +4,80 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
 
+from engine.assessment import assess_loan
+from engine.policy_retriever import retrieve_relevant_policy
 
-# Load environment variables from the .env file
+
 load_dotenv()
 
-# Read the Gemini API key
 api_key = os.getenv("GEMINI_API_KEY")
 
-# Stop the program with a clear message if the key is missing
 if not api_key:
     raise ValueError(
         "GEMINI_API_KEY was not found in the .env file."
     )
 
 
-# Create the Gemini client
 client = genai.Client(api_key=api_key)
 
 
+def build_retrieval_query(assessment):
+    reasons = assessment["reasons"]
+    risk_factors = assessment["risk_factors"]
+
+    query = f"""
+Explain the lending policies relevant to this loan assessment.
+
+Eligibility decision: {assessment["decision"]}
+Eligibility reasons: {reasons}
+Risk level: {assessment["risk_level"]}
+Risk factors: {risk_factors}
+FOIR: {assessment["foir"]}%
+"""
+
+    return query
+
+
 def generate_advisory(assessment):
-    """
-    Generate a human-readable advisory explanation
-    from the deterministic loan assessment.
-    """
+    retrieval_query = build_retrieval_query(assessment)
+
+    retrieved_results = retrieve_relevant_policy(
+        retrieval_query,
+        top_k=3
+    )
+
+    policy_context = "\n\n".join(
+        result["text"]
+        for result in retrieved_results
+    )
 
     prompt = f"""
-You are an AI credit advisory assistant.
+You are an AI credit advisory assistant for an educational prototype.
 
-Your job is to explain the loan assessment provided below in clear,
-professional and easy-to-understand language.
+Explain the loan assessment below in clear, professional and
+easy-to-understand language.
 
-Use only the information contained in the Loan Assessment below.
+STRICT GROUNDING RULES:
+
+Use only:
+1. The Loan Assessment provided below.
+2. The Retrieved Policy Context provided below.
 
 Do not introduce external banking rules, industry benchmarks,
 credit-score ranges, FOIR standards, regulatory requirements,
-or lending policies that are not explicitly provided.
+or lending policies that are not explicitly present in the supplied
+information.
 
-Do not invent reasons for the customer's risk level.
+Do not change, override, or independently recalculate the eligibility
+decision, EMI, FOIR, risk points, or risk level.
 
-Do not change, override, or independently recalculate the decision.
-The eligibility decision and risk assessment were produced by a
-deterministic rule-based system.
+Do not invent reasons for the customer's eligibility or risk level.
 
-Loan Assessment:
+If the supplied information does not support a statement, do not make
+that statement.
+
+LOAN ASSESSMENT:
+
 Customer: {assessment["customer_name"]}
 Loan Product: {assessment["product_name"]}
 Requested Amount: INR {assessment["requested_amount"]}
@@ -56,15 +87,25 @@ FOIR: {assessment["foir"]}%
 Eligibility Decision: {assessment["decision"]}
 Eligibility Reasons: {assessment["reasons"]}
 Risk Level: {assessment["risk_level"]}
+Risk Points: {assessment["risk_points"]}
 Risk Factors: {assessment["risk_factors"]}
 
-Provide:
-1. A short assessment summary.
-2. An explanation of the affordability position.
-3. An explanation of the risk indicators.
-4. Practical suggestions for the applicant.
+RETRIEVED POLICY CONTEXT:
 
-Do not claim that this assessment represents a real bank approval.
+{policy_context}
+
+RESPONSE REQUIREMENTS:
+
+Provide:
+1. Assessment Summary
+2. Affordability Explanation
+3. Eligibility Explanation
+4. Risk Explanation
+5. Practical Next Steps
+
+Clearly state that this is an educational prototype assessment and
+does not represent a formal lending decision by a real financial
+institution.
 """
 
     try:
@@ -87,8 +128,6 @@ Do not claim that this assessment represents a real bank approval.
 
 
 if __name__ == "__main__":
-    from engine.assessment import assess_loan
-
     assessment = assess_loan(
         customer_id="CUS001",
         product_id="PERSONAL_FLEXI",

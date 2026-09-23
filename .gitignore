@@ -25,3 +25,6 @@ chroma_db/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Generated policy embedding cache
+vector_store/

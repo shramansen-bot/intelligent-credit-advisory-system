@@ -1,0 +1,138 @@
+INTELLIGENT CREDIT ADVISORY SYSTEM
+SYNTHETIC LENDING POLICY
+
+IMPORTANT NOTICE
+This policy is fictional and has been created only for educational
+and demonstration purposes. It does not represent the lending policy
+of any real bank, NBFC, financial institution, or regulatory authority.
+
+
+1. GENERAL ELIGIBILITY POLICY
+
+Applicants must satisfy the eligibility requirements configured for
+the selected loan product.
+
+An applicant must have completed KYC verification.
+
+Income proof must be verified before an applicant can be considered
+eligible.
+
+Applicants flagged for fraud review are not eligible for automated
+loan approval.
+
+The applicant's age must fall within the minimum and maximum age
+limits configured for the selected loan product.
+
+The applicant's employment type must be supported by the selected
+loan product.
+
+
+2. CREDIT SCORE POLICY
+
+Each loan product has a minimum required credit score.
+
+If the applicant's credit score is below the minimum credit score
+configured for the selected product, the applicant does not satisfy
+the credit-score eligibility requirement.
+
+For internal prototype risk classification:
+
+A credit score below 700 contributes 2 risk points.
+
+A credit score from 700 to 749 contributes 1 risk point.
+
+A credit score of 750 or above contributes 0 credit-score risk points.
+
+
+3. FOIR AND AFFORDABILITY POLICY
+
+FOIR stands for Fixed Obligation to Income Ratio.
+
+For this prototype, FOIR is calculated as:
+
+FOIR =
+(Existing Monthly Obligations + Proposed Loan EMI)
+/
+Monthly Net Income
+x 100
+
+Each loan product defines its own maximum permitted FOIR.
+
+If the calculated FOIR exceeds the maximum FOIR configured for the
+selected loan product, the applicant does not satisfy the affordability
+requirement.
+
+For internal prototype risk classification:
+
+FOIR above 50% contributes 2 risk points.
+
+FOIR above 40% and up to 50% contributes 1 risk point.
+
+FOIR of 40% or below contributes 0 FOIR risk points.
+
+
+4. LOAN AMOUNT POLICY
+
+The requested loan amount must fall between the minimum and maximum
+loan amounts configured for the selected product.
+
+Requests outside the permitted range do not satisfy the product
+eligibility requirements.
+
+
+5. TENURE POLICY
+
+The requested loan tenure must fall between the minimum and maximum
+tenure configured for the selected loan product.
+
+Requests outside the permitted tenure range do not satisfy the product
+eligibility requirements.
+
+
+6. RISK CLASSIFICATION POLICY
+
+The prototype combines credit-score risk points and FOIR risk points.
+
+Total risk points of 0:
+Risk Level = LOW
+
+Total risk points from 1 to 2:
+Risk Level = MEDIUM
+
+Total risk points of 3 or more:
+Risk Level = HIGH
+
+Risk classification is intended to provide additional explanation and
+does not independently determine loan eligibility.
+
+
+7. DECISION POLICY
+
+An applicant is classified as ELIGIBLE only when all applicable
+eligibility checks pass.
+
+If one or more eligibility checks fail, the applicant is classified
+as NOT ELIGIBLE.
+
+The system must provide the reason or reasons associated with failed
+eligibility checks.
+
+Risk level and eligibility decision are separate outputs. Therefore,
+an applicant may satisfy all eligibility rules while still receiving
+a MEDIUM or HIGH risk classification.
+
+
+8. AI ADVISORY POLICY
+
+The AI advisory component must not override the deterministic
+eligibility decision.
+
+The AI component must not independently modify EMI, FOIR, risk points,
+risk level, or eligibility results.
+
+The AI component should explain the assessment in clear language using
+the calculated assessment data and relevant retrieved policy information.
+
+The AI-generated explanation is advisory and educational. It must not
+be presented as a formal approval, rejection, or lending decision made
+by a real financial institution.
