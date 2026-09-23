@@ -1,6 +1,7 @@
 from engine.data_loader import load_customers, load_loan_products
 from engine.affordability import calculate_emi, calculate_foir
 from engine.eligibility import evaluate_eligibility
+from engine.risk import assess_risk
 
 
 def find_customer(customers, customer_id):
@@ -60,22 +61,28 @@ def assess_loan(
         requested_tenure,
         foir
     )
+    risk = assess_risk(
+    customer["credit_score"],
+    foir
+    )
 
     return {
-        "customer_name": customer["name"],
-        "product_name": product["product_name"],
-        "requested_amount": requested_amount,
-        "requested_tenure": requested_tenure,
-        "estimated_emi": emi,
-        "foir": foir,
-        "decision": eligibility["decision"],
-        "reasons": eligibility["reasons"]
-    }
-
+    "customer_name": customer["name"],
+    "product_name": product["product_name"],
+    "requested_amount": requested_amount,
+    "requested_tenure": requested_tenure,
+    "estimated_emi": emi,
+    "foir": foir,
+    "decision": eligibility["decision"],
+    "reasons": eligibility["reasons"],
+    "risk_level": risk["risk_level"],
+    "risk_points": risk["risk_points"],
+    "risk_factors": risk["risk_factors"]
+}
 
 if __name__ == "__main__":
     result = assess_loan(
-        customer_id="CUS003",
+        customer_id="CUS001",
         product_id="PERSONAL_FLEXI",
         requested_amount=500000,
         requested_tenure=60
