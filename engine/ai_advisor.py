@@ -10,18 +10,29 @@ from engine.policy_retriever import retrieve_relevant_policy
 
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
 
-if not api_key:
-    raise ValueError(
-        "GEMINI_API_KEY was not found in the .env file."
-    )
+def get_gemini_client():
+    """
+    Create the Gemini client only when AI generation is required.
 
+    This prevents the module from failing during import when an API key
+    has not yet been configured.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=api_key)
+    if not api_key:
+        raise ValueError(
+            "GEMINI_API_KEY was not found. "
+            "Create a .env file using .env.example and add your API key."
+        )
+
+    return genai.Client(api_key=api_key)
 
 
 def build_retrieval_query(assessment):
+    """
+    Build a semantic-search query from the deterministic assessment.
+    """
     reasons = assessment["reasons"]
     risk_factors = assessment["risk_factors"]
 
@@ -39,6 +50,10 @@ FOIR: {assessment["foir"]}%
 
 
 def generate_advisory(assessment):
+    """
+    Retrieve relevant synthetic lending-policy sections and use Gemini
+    to generate a grounded explanation of the deterministic assessment.
+    """
     retrieval_query = build_retrieval_query(assessment)
 
     retrieved_results = retrieve_relevant_policy(
@@ -107,6 +122,8 @@ Clearly state that this is an educational prototype assessment and
 does not represent a formal lending decision by a real financial
 institution.
 """
+
+    client = get_gemini_client()
 
     try:
         response = client.models.generate_content(

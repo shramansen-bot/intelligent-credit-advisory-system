@@ -28,12 +28,15 @@ def test_generate_advisory():
     mock_response = MagicMock()
     mock_response.text = "Test advisory generated successfully."
 
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+
     with patch(
         "engine.ai_advisor.retrieve_relevant_policy",
         return_value=mock_policy_results
     ), patch(
-        "engine.ai_advisor.client.models.generate_content",
-        return_value=mock_response
+        "engine.ai_advisor.get_gemini_client",
+        return_value=mock_client
     ):
         result = generate_advisory(assessment)
 

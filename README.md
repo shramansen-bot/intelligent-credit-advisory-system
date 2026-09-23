@@ -1,6 +1,6 @@
 # Intelligent Credit Advisory System
 
-An AI-powered credit assessment and loan advisory prototype that combines deterministic financial calculations, rule-based eligibility checks, risk assessment, semantic policy retrieval, and a grounded Generative AI explanation layer.
+An AI-powered credit assessment and loan advisory prototype that combines deterministic financial calculations, rule-based eligibility checks, risk assessment, semantic policy retrieval, and grounded Generative AI explanations.
 
 The application provides an explainable loan assessment through an interactive Streamlit interface.
 
@@ -81,12 +81,12 @@ FOIR exceeds the maximum permitted limit.
 
 ### Affordability Analysis
 
-The system calculates:
+The system includes functionality for:
 
 - Estimated monthly EMI
 - FOIR
-- Disposable income utilities
-- Maximum affordable EMI utilities
+- Disposable income
+- Maximum affordable EMI
 
 ### Risk Assessment
 
@@ -119,7 +119,7 @@ Users can:
 - Enter the requested loan amount
 - Select the loan tenure
 - Run the deterministic assessment
-- View EMI, FOIR, eligibility and risk
+- View EMI, FOIR, eligibility, and risk
 - View detailed eligibility reasons
 - Generate an AI-powered advisory
 
@@ -169,7 +169,7 @@ Customer Data + Loan Product Data
 
 The Generative AI model is **not the decision engine**.
 
-Eligibility, EMI, FOIR and risk calculations are performed using deterministic Python logic.
+Eligibility, EMI, FOIR, and risk calculations are performed using deterministic Python logic.
 
 Gemini is used to explain the resulting assessment with relevant retrieved policy context.
 
@@ -229,7 +229,8 @@ intelligent-credit-advisory-system/
 - Pytest
 - python-dotenv
 - JSON
-- Git and GitHub
+- Git
+- GitHub
 
 ---
 
@@ -240,7 +241,7 @@ Before running the project, ensure that the following are installed:
 - Python
 - Git
 - pip
-- A Google Gemini API key
+- A Google Gemini API key for RAG and AI advisory functionality
 
 A Python virtual environment is recommended.
 
@@ -271,7 +272,27 @@ python -m venv .venv
 #### Windows PowerShell
 
 ```powershell
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
+```
+
+> **PowerShell note:** On some Windows systems, the execution policy may prevent `Activate.ps1` from running. The project can still be used without changing the system execution policy. In that case, use the Python executable inside the virtual environment directly.
+
+Install dependencies without activation:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Run the automated tests without activation:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
+
+Run the Streamlit application without activation:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 #### Windows Command Prompt
@@ -287,6 +308,8 @@ source .venv/bin/activate
 ```
 
 ### Step 4: Install Dependencies
+
+If the virtual environment has been activated, run:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -314,6 +337,17 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 Replace the placeholder with a valid Gemini API key.
 
+### Important
+
+A Gemini API key is required when the application needs to:
+
+- Generate policy embeddings
+- Generate query embeddings
+- Retrieve policy context using semantic embeddings
+- Generate the AI Credit Advisory
+
+The deterministic Python modules and mocked automated tests do not require a live Gemini API key.
+
 ### Security
 
 The actual `.env` file must never be committed to GitHub.
@@ -326,10 +360,16 @@ Only `.env.example`, which contains no real secret, should be committed.
 
 ## 10. Running the Application
 
-From the project root with the virtual environment activated, run:
+With the virtual environment activated, run:
 
 ```bash
 streamlit run app.py
+```
+
+If PowerShell activation is unavailable, run:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 Streamlit will start the local application, normally at:
@@ -432,7 +472,7 @@ The synthetic policy document is stored at:
 knowledge_base/lending_policy.txt
 ```
 
-The workflow is:
+The retrieval workflow is:
 
 ```text
 Policy Document
@@ -462,13 +502,27 @@ Top Relevant Policy Sections
 Gemini Advisory Prompt
 ```
 
-Document embeddings use the Gemini embedding model and cosine similarity is used to identify the most relevant policy sections.
+Document embeddings use the Gemini embedding service.
+
+Cosine similarity is used to compare the assessment-based query embedding with the policy-section embeddings and identify relevant policy context.
+
+### Local Embedding Cache
+
+When policy embeddings are generated, they are saved locally to:
+
+```text
+vector_store/policy_embeddings.json
+```
+
+This file is generated automatically and is excluded from GitHub through `.gitignore`.
+
+If the cache does not exist, the system generates a new policy embedding index when retrieval is first required.
 
 ---
 
 ## 16. AI Grounding and Safety
 
-The AI advisory prompt is designed to restrict the model to information supplied by:
+The AI advisory prompt restricts the model to information supplied by:
 
 1. The deterministic loan assessment.
 2. The retrieved synthetic policy context.
@@ -481,13 +535,26 @@ The AI is instructed not to:
 - Change risk points
 - Change the risk level
 - Invent eligibility reasons
-- Introduce unsupported lending policies or regulatory requirements
+- Introduce unsupported lending policies
+- Introduce unsupported regulatory requirements
 
-This architecture keeps financial calculations and decisions deterministic while using Generative AI primarily for explanation.
+This architecture keeps financial calculations and eligibility decisions deterministic while using Generative AI primarily for explanation.
 
 ---
 
-## 17. Testing
+## 17. Lazy Gemini Initialization
+
+Gemini clients are initialized only when Gemini functionality is actually required.
+
+Importing the project's modules does not require a Gemini API key.
+
+This design allows deterministic modules and mocked automated tests to operate without connecting to the external Gemini service.
+
+When an embedding or live AI advisory is requested, the application checks for `GEMINI_API_KEY` and creates the required Gemini client.
+
+---
+
+## 18. Testing
 
 The project includes automated tests using `pytest`.
 
@@ -495,6 +562,12 @@ Run the tests from the project root using:
 
 ```bash
 python -m pytest
+```
+
+On Windows PowerShell systems where virtual-environment activation is blocked, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
 ```
 
 The test suite covers:
@@ -512,29 +585,49 @@ The test suite covers:
 - HIGH risk classification
 - AI advisory integration logic using mocked external components
 
-The AI unit test mocks external AI and retrieval operations so that automated testing does not depend on live Gemini responses.
+The AI unit test mocks both policy retrieval and Gemini generation.
 
-At the time of submission:
+Therefore, running the automated test suite does not require a live Gemini request or API key.
+
+Expected result:
 
 ```text
-12 tests passed
+12 passed
 ```
 
 ---
 
-## 18. Synthetic Data
+## 19. Synthetic Data
 
-All customer profiles in `data/customers.json` are fictional.
+All customer profiles in:
 
-All loan products in `data/loan_products.json` are synthetic.
+```text
+data/customers.json
+```
 
-The lending policy in `knowledge_base/lending_policy.txt` was created specifically for this educational prototype.
+are fictional.
+
+All loan products in:
+
+```text
+data/loan_products.json
+```
+
+are synthetic.
+
+The lending policy in:
+
+```text
+knowledge_base/lending_policy.txt
+```
+
+was created specifically for this educational prototype.
 
 The project must not be interpreted as representing actual lending criteria used by a real financial institution.
 
 ---
 
-## 19. External Services
+## 20. External Services
 
 ### Google Gemini API
 
@@ -543,27 +636,38 @@ The project uses Google's Gemini services for:
 - Text embeddings for semantic policy retrieval
 - Generative AI advisory explanations
 
-A valid API key must be supplied through the `GEMINI_API_KEY` environment variable.
+A valid API key must be supplied through the `GEMINI_API_KEY` environment variable when these capabilities are used.
 
-The deterministic loan assessment can be conceptually separated from the AI explanation layer; however, AI advisory and embedding-based policy retrieval require access to the configured Gemini service.
+External Gemini calls are not required for the deterministic assessment engine or the mocked automated test suite.
 
 ---
 
-## 20. Known Limitations
+## 21. Error Handling
 
-- The project uses synthetic customers, products and lending rules.
+If the Gemini service is temporarily unavailable because of high demand, the AI advisory layer handles the service error and informs the user that the advisory is temporarily unavailable.
+
+The deterministic assessment result remains separate from the availability of the Generative AI service.
+
+If the Gemini API key is missing when Gemini functionality is requested, the system reports that the key must be configured using `.env.example`.
+
+---
+
+## 22. Known Limitations
+
+- The project uses synthetic customers, products, and lending rules.
 - It is not connected to a real banking core system or credit bureau.
 - It does not perform real KYC or fraud verification.
-- Gemini availability depends on the external API service.
+- Gemini functionality depends on an external API service and internet connectivity.
 - AI responses may be temporarily unavailable during API errors or high service demand.
 - The locally cached policy embeddings are not automatically invalidated when the policy document is modified.
 - The risk model is intentionally simplified for demonstration.
 - Semantic retrieval may not always retrieve every policy section relevant to a broad assessment.
+- The application currently uses predefined synthetic customer profiles and loan products.
 - The system is not intended for real lending decisions.
 
 ---
 
-## 21. Future Enhancements
+## 23. Future Enhancements
 
 Possible extensions include:
 
@@ -578,13 +682,15 @@ Possible extensions include:
 - Audit logging
 - Explainability dashboards
 - API-based architecture
-- Deployment to a cloud environment
+- Cloud deployment
+- Enhanced retrieval strategies
+- Additional error handling and observability
 
 ---
 
-## 22. Responsible Use
+## 24. Responsible Use
 
-This application demonstrates how deterministic financial logic and Generative AI can work together while keeping the final assessment explainable.
+This application demonstrates how deterministic financial logic and Generative AI can work together while keeping the core assessment explainable.
 
 It is intended exclusively for educational and demonstration purposes.
 
