@@ -702,13 +702,13 @@ After configuring the database credentials in `.env`, initialize the database.
 ### Windows
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\init_database.py
+.\.venv\Scripts\python.exe -m scripts.init_database
 ```
 
 ### macOS/Linux
 
 ```bash
-python scripts/init_database.py
+python -m scripts.init_database
 ```
 
 The initialization script:
@@ -729,13 +729,13 @@ Seed the synthetic customers and loan products.
 ### Windows
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\seed_database.py
+.\.venv\Scripts\python.exe -m scripts.seed_database
 ```
 
 ### macOS/Linux
 
 ```bash
-python scripts/seed_database.py
+python -m scripts.seed_database
 ```
 
 The seeding operation is designed to insert or update the supplied synthetic customer and product records.
@@ -751,13 +751,13 @@ To ingest the RBI regulatory-guidance knowledge files into PostgreSQL + pgvector
 ### Windows
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\ingest_rbi_policies.py
+.\.venv\Scripts\python.exe -m scripts.ingest_rbi_policies
 ```
 
 ### macOS/Linux
 
 ```bash
-python scripts/ingest_rbi_policies.py
+python -m scripts.ingest_rbi_policies
 ```
 
 This process:
