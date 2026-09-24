@@ -1,218 +1,461 @@
 import os
-import math
-import json
-from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from engine.policy_loader import load_policy, split_policy_into_chunks
+from engine.database import get_database_connection
+from engine.policy_loader import (
+    load_policy,
+    split_policy_into_chunks,
+)
 
 
 load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-VECTOR_STORE_DIR = BASE_DIR / "vector_store"
-VECTOR_STORE_FILE = VECTOR_STORE_DIR / "policy_embeddings.json"
+EMBEDDING_MODEL = "gemini-embedding-001"
+EMBEDDING_DIMENSION = 768
 
-_policy_index = None
 
+# =========================================================
+# POLICY SOURCE DEFINITIONS
+# =========================================================
+
+INTERNAL_POLICY_SOURCE = {
+    "source_name": "lending_policy.txt",
+    "source_type": "INTERNAL_POLICY",
+    "source_title": "Synthetic Lending Policy",
+    "source_url": None,
+}
+
+
+# =========================================================
+# GEMINI CLIENT
+# =========================================================
 
 def get_gemini_client():
     """
-    Create the Gemini client only when it is actually needed.
-
-    This allows the project modules and automated tests to be imported
-    even when a GEMINI_API_KEY has not been configured.
+    Create the Gemini client only when actually required.
     """
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
         raise ValueError(
             "GEMINI_API_KEY was not found. "
-            "Create a .env file using .env.example and add your API key."
+            "Create a .env file using .env.example "
+            "and add your API key."
         )
 
     return genai.Client(api_key=api_key)
 
 
+# =========================================================
+# EMBEDDING GENERATION
+# =========================================================
+
 def create_embedding(text, task_type):
     """
-    Generate a Gemini embedding for the supplied text.
+    Generate a 768-dimensional Gemini embedding.
     """
     client = get_gemini_client()
 
     response = client.models.embed_content(
-        model="gemini-embedding-001",
+        model=EMBEDDING_MODEL,
         contents=text,
         config=types.EmbedContentConfig(
             task_type=task_type,
-            output_dimensionality=768
-        )
+            output_dimensionality=EMBEDDING_DIMENSION,
+        ),
     )
 
     return response.embeddings[0].values
 
 
-def cosine_similarity(vector_a, vector_b):
+# =========================================================
+# PGVECTOR SERIALIZATION
+# =========================================================
+
+def embedding_to_pgvector(embedding):
     """
-    Calculate cosine similarity between two embedding vectors.
+    Convert a Python list into the textual vector format
+    accepted by PostgreSQL pgvector.
     """
-    dot_product = sum(
-        a * b
-        for a, b in zip(vector_a, vector_b)
+    return "[" + ",".join(
+        str(value)
+        for value in embedding
+    ) + "]"
+
+
+# =========================================================
+# DATABASE INSERTION
+# =========================================================
+
+def store_policy_chunks(
+    source_name,
+    source_type,
+    source_title,
+    source_url,
+    chunks,
+):
+    """
+    Generate embeddings for policy chunks and store them
+    in PostgreSQL with source metadata.
+
+    Existing chunks belonging to the same source are replaced.
+    """
+    if not chunks:
+        raise ValueError(
+            f"No policy chunks were supplied for {source_name}."
+        )
+
+    print(
+        f"Generating embeddings for {len(chunks)} chunks "
+        f"from {source_title}..."
     )
 
-    magnitude_a = math.sqrt(
-        sum(a * a for a in vector_a)
-    )
+    embedded_chunks = []
 
-    magnitude_b = math.sqrt(
-        sum(b * b for b in vector_b)
-    )
+    for index, chunk in enumerate(
+        chunks,
+        start=1,
+    ):
+        print(
+            f"Embedding chunk {index}/{len(chunks)} "
+            f"from {source_name}..."
+        )
 
-    if magnitude_a == 0 or magnitude_b == 0:
-        return 0
-
-    return dot_product / (magnitude_a * magnitude_b)
-
-
-def build_policy_index():
-    """
-    Load the synthetic lending policy, split it into sections,
-    and generate an embedding for every section.
-    """
-    policy = load_policy()
-    chunks = split_policy_into_chunks(policy)
-
-    policy_index = []
-
-    print("Generating policy embeddings...")
-
-    for chunk in chunks:
         embedding = create_embedding(
             chunk,
-            task_type="RETRIEVAL_DOCUMENT"
+            task_type="RETRIEVAL_DOCUMENT",
         )
 
-        policy_index.append(
-            {
-                "text": chunk,
-                "embedding": embedding
-            }
+        embedded_chunks.append(
+            (
+                source_name,
+                source_type,
+                source_title,
+                source_url,
+                chunk,
+                embedding_to_pgvector(
+                    embedding
+                ),
+            )
         )
 
-    return policy_index
-
-
-def save_policy_index(policy_index):
+    delete_query = """
+        DELETE FROM policy_chunks
+        WHERE source_name = %s;
     """
-    Save generated policy embeddings locally so that they do not
-    need to be regenerated every time the application starts.
+
+    insert_query = """
+        INSERT INTO policy_chunks (
+            source_name,
+            source_type,
+            source_title,
+            source_url,
+            chunk_text,
+            embedding
+        )
+        VALUES (
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s::vector
+        );
     """
-    VECTOR_STORE_DIR.mkdir(
-        parents=True,
-        exist_ok=True
+
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                delete_query,
+                (source_name,),
+            )
+
+            for item in embedded_chunks:
+                cursor.execute(
+                    insert_query,
+                    item,
+                )
+
+        connection.commit()
+
+    print(
+        f"Stored {len(embedded_chunks)} chunks "
+        f"for {source_title}."
     )
 
-    with open(
-        VECTOR_STORE_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
-        json.dump(policy_index, file)
-
-    print("Policy embedding index saved to disk.")
+    return len(embedded_chunks)
 
 
-def load_saved_policy_index():
+# =========================================================
+# INTERNAL POLICY INDEX
+# =========================================================
+
+def build_internal_policy_index():
     """
-    Load the locally cached policy embedding index.
+    Load the synthetic internal lending policy, split it
+    into sections, and store its embeddings in pgvector.
     """
-    with open(
-        VECTOR_STORE_FILE,
-        "r",
-        encoding="utf-8"
-    ) as file:
-        policy_index = json.load(file)
+    policy_text = load_policy()
 
-    print("Policy embedding index loaded from disk.")
+    chunks = split_policy_into_chunks(
+        policy_text
+    )
 
-    return policy_index
+    return store_policy_chunks(
+        source_name=(
+            INTERNAL_POLICY_SOURCE["source_name"]
+        ),
+        source_type=(
+            INTERNAL_POLICY_SOURCE["source_type"]
+        ),
+        source_title=(
+            INTERNAL_POLICY_SOURCE["source_title"]
+        ),
+        source_url=(
+            INTERNAL_POLICY_SOURCE["source_url"]
+        ),
+        chunks=chunks,
+    )
 
 
-def get_policy_index():
+# =========================================================
+# INDEX STATUS
+# =========================================================
+
+def policy_source_exists(source_name):
     """
-    Return the policy embedding index.
-
-    The index is loaded from memory when available, otherwise from
-    the local cache. If no cache exists, a new index is generated.
+    Check whether PostgreSQL already contains chunks
+    belonging to a particular source.
     """
-    global _policy_index
-
-    if _policy_index is not None:
-        return _policy_index
-
-    if VECTOR_STORE_FILE.exists():
-        _policy_index = load_saved_policy_index()
-    else:
-        _policy_index = build_policy_index()
-        save_policy_index(_policy_index)
-
-    return _policy_index
-
-
-def retrieve_relevant_policy(query, top_k=2):
+    query = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM policy_chunks
+            WHERE source_name = %s
+        );
     """
-    Retrieve the policy sections that are semantically most relevant
-    to the supplied query.
+
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                query,
+                (source_name,),
+            )
+
+            return cursor.fetchone()[0]
+
+
+def ensure_internal_policy_index():
     """
-    policy_index = get_policy_index()
+    Ensure the synthetic internal policy is available
+    in PostgreSQL.
+    """
+    source_name = (
+        INTERNAL_POLICY_SOURCE["source_name"]
+    )
+
+    if not policy_source_exists(
+        source_name
+    ):
+        print(
+            "Internal policy embeddings were not "
+            "found in PostgreSQL."
+        )
+
+        build_internal_policy_index()
+
+
+# =========================================================
+# GENERAL MULTI-SOURCE INGESTION
+# =========================================================
+
+def ingest_policy_source(
+    source_name,
+    source_type,
+    source_title,
+    source_url,
+    chunks,
+):
+    """
+    Public ingestion function for adding additional policy
+    or regulatory sources to the pgvector knowledge base.
+
+    This will later be used for RBI regulatory guidance.
+    """
+    return store_policy_chunks(
+        source_name=source_name,
+        source_type=source_type,
+        source_title=source_title,
+        source_url=source_url,
+        chunks=chunks,
+    )
+
+
+# =========================================================
+# SEMANTIC RETRIEVAL
+# =========================================================
+
+def retrieve_relevant_policy(
+    query,
+    top_k=2,
+    source_type=None,
+):
+    """
+    Retrieve semantically relevant policy chunks using
+    PostgreSQL + pgvector cosine-distance search.
+
+    When source_type is provided, retrieval can be restricted
+    to a particular source category such as:
+
+        INTERNAL_POLICY
+        RBI_REGULATORY_GUIDANCE
+
+    When source_type is None, all policy sources are searched.
+    """
+    if top_k <= 0:
+        raise ValueError(
+            "top_k must be greater than zero."
+        )
+
+    ensure_internal_policy_index()
 
     query_embedding = create_embedding(
         query,
-        task_type="RETRIEVAL_QUERY"
+        task_type="RETRIEVAL_QUERY",
     )
 
-    scored_chunks = []
+    query_vector = embedding_to_pgvector(
+        query_embedding
+    )
 
-    for item in policy_index:
-        similarity = cosine_similarity(
-            query_embedding,
-            item["embedding"]
+    if source_type is None:
+        search_query = """
+            SELECT
+                chunk_id,
+                source_name,
+                source_type,
+                source_title,
+                source_url,
+                chunk_text,
+                1 - (
+                    embedding <=> %s::vector
+                ) AS similarity
+            FROM policy_chunks
+            ORDER BY
+                embedding <=> %s::vector
+            LIMIT %s;
+        """
+
+        parameters = (
+            query_vector,
+            query_vector,
+            top_k,
         )
 
-        scored_chunks.append(
+    else:
+        search_query = """
+            SELECT
+                chunk_id,
+                source_name,
+                source_type,
+                source_title,
+                source_url,
+                chunk_text,
+                1 - (
+                    embedding <=> %s::vector
+                ) AS similarity
+            FROM policy_chunks
+            WHERE source_type = %s
+            ORDER BY
+                embedding <=> %s::vector
+            LIMIT %s;
+        """
+
+        parameters = (
+            query_vector,
+            source_type,
+            query_vector,
+            top_k,
+        )
+
+    with get_database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                search_query,
+                parameters,
+            )
+
+            rows = cursor.fetchall()
+
+    results = []
+
+    for row in rows:
+        results.append(
             {
-                "text": item["text"],
-                "similarity": similarity
+                "chunk_id": row[0],
+                "source_name": row[1],
+                "source_type": row[2],
+                "source_title": row[3],
+                "source_url": row[4],
+                "text": row[5],
+                "similarity": float(row[6]),
             }
         )
 
-    scored_chunks.sort(
-        key=lambda item: item["similarity"],
-        reverse=True
-    )
+    return results
 
-    return scored_chunks[:top_k]
 
+# =========================================================
+# MANUAL TEST
+# =========================================================
 
 if __name__ == "__main__":
-    query = "Why would a customer fail the affordability check?"
+    test_query = (
+        "Why would a customer fail "
+        "the affordability check?"
+    )
 
     results = retrieve_relevant_policy(
-        query,
-        top_k=2
+        test_query,
+        top_k=3,
     )
 
     print("\nQuery:")
-    print(query)
+    print(test_query)
 
-    for index, result in enumerate(results, start=1):
-        print(f"\n--- RESULT {index} ---")
+    for index, result in enumerate(
+        results,
+        start=1,
+    ):
+        print(
+            f"\n--- RESULT {index} ---"
+        )
+
+        print(
+            "Source type:",
+            result["source_type"],
+        )
+
+        print(
+            "Source:",
+            result["source_title"],
+        )
+
+        if result["source_url"]:
+            print(
+                "URL:",
+                result["source_url"],
+            )
+
         print(
             "Similarity:",
-            round(result["similarity"], 4)
+            round(
+                result["similarity"],
+                4,
+            ),
         )
+
         print(result["text"])

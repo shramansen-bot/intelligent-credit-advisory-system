@@ -1,0 +1,139 @@
+RESERVE BANK OF INDIA
+REGULATORY GUIDANCE CORPUS
+
+DOCUMENT TOPIC
+Fair Practices Code for Lenders
+
+SOURCE TYPE
+RBI_REGULATORY_GUIDANCE
+
+SOURCE
+Reserve Bank of India
+
+REFERENCE
+Reserve Bank of India guidance on Fair Practices Code for Lenders.
+
+IMPORTANT NOTICE
+This file is a concise educational summary of publicly available
+Reserve Bank of India regulatory guidance prepared for use in the
+Intelligent Credit Advisory System's RAG knowledge base.
+
+It is regulatory context and does not define the prototype's internal
+credit-score thresholds, FOIR thresholds, risk points, product limits,
+or automated eligibility rules.
+
+
+1. LOAN APPLICATIONS AND TRANSPARENCY
+
+Loan application processes should provide borrowers with appropriate
+information concerning matters that affect their interests.
+
+Relevant fees, charges, prepayment conditions, penalties, interest-rate
+related conditions, and other material terms should be disclosed
+transparently where applicable.
+
+The objective is to allow borrowers to understand the proposed credit
+facility and make informed decisions.
+
+
+2. ACKNOWLEDGEMENT AND PROCESSING
+
+Lenders should have an appropriate system for acknowledging receipt of
+loan applications.
+
+Loan applications should be processed within an appropriate and
+communicated time frame in accordance with the applicable regulatory
+framework and the lender's procedures.
+
+Transparency regarding application processing helps borrowers
+understand the status and expected handling of their application.
+
+
+3. CREDIT APPRAISAL
+
+Lenders should conduct a proper assessment of the borrower's credit
+application.
+
+Security or margin requirements should not be treated as a substitute
+for appropriate due diligence regarding the creditworthiness of the
+borrower.
+
+Credit assessment should therefore consider the borrower's ability and
+eligibility to undertake the proposed credit obligation.
+
+
+4. COMMUNICATION OF LOAN TERMS
+
+When credit is sanctioned, applicable terms and conditions should be
+communicated appropriately to the borrower.
+
+The borrower should be informed of relevant terms governing the credit
+facility, and the lender should maintain appropriate records of the
+borrower's acceptance where required.
+
+Loan documentation should enable the borrower to understand the terms
+under which the credit facility is being provided.
+
+
+5. COMMUNICATION OF CREDIT DECISIONS
+
+Credit applications should be evaluated through an appropriate
+appraisal process.
+
+Where applicable under RBI guidance, lenders should communicate
+relevant reasons associated with rejection of loan applications.
+
+Clear communication improves transparency and helps borrowers
+understand the outcome of the credit-assessment process.
+
+
+6. DISBURSEMENT AND CHANGES IN TERMS
+
+Loan disbursement should take place in accordance with the applicable
+terms and conditions of sanction.
+
+Borrowers should receive appropriate notice of applicable changes in
+loan terms and conditions, including relevant changes affecting
+interest, charges, repayment, or other material conditions.
+
+
+7. FAIR TREATMENT OF BORROWERS
+
+Fair lending practices require borrowers to be treated appropriately
+throughout the lending relationship.
+
+Lenders should avoid inappropriate interference in the affairs of
+borrowers except where permitted under the loan terms or where relevant
+new information requires appropriate action.
+
+Recovery activities should not involve undue harassment or coercive
+conduct.
+
+
+8. GRIEVANCE REDRESSAL
+
+Lending institutions should maintain an appropriate grievance-redressal
+mechanism for disputes and borrower complaints relating to lending
+activities.
+
+The mechanism should support appropriate review and resolution of
+borrower grievances.
+
+
+9. RELATIONSHIP TO THIS PROTOTYPE
+
+The Intelligent Credit Advisory System uses this RBI guidance as
+external regulatory and fair-lending context.
+
+The deterministic Underwriting Decision Agent continues to apply the
+rules configured in the Synthetic Lending Policy and loan-product
+data.
+
+The Policy / RAG Agent may retrieve this document when explaining
+topics involving loan appraisal, borrower transparency, communication
+of terms, rejection reasons, fair treatment, application processing,
+or grievance handling.
+
+RBI regulatory guidance must not be interpreted as the source of the
+prototype's synthetic minimum credit score, FOIR thresholds, risk
+points, or product-specific eligibility limits.

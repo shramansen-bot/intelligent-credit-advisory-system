@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, StateGraph
 
 from agents.state import LoanAdvisoryState
 from agents.supervisor_agent import supervisor_agent
@@ -8,19 +8,21 @@ from agents.underwriting_agent import underwriting_agent
 from agents.policy_agent import policy_agent
 from agents.explanation_agent import explanation_agent
 
+from engine.database_repository import (
+    create_loan_application,
+    update_loan_application_result,
+    save_audit_logs,
+)
+
 
 # =========================================================
-# SUPERVISOR ROUTING FUNCTION
+# SUPERVISOR ROUTING
 # =========================================================
 
 def route_from_supervisor(state: LoanAdvisoryState):
     """
     Read the route selected by the Supervisor Agent.
-
-    LangGraph uses the returned string to determine which
-    specialized node should execute next.
     """
-
     return state["next_agent"]
 
 
@@ -28,219 +30,181 @@ def route_from_supervisor(state: LoanAdvisoryState):
 # BUILD LANGGRAPH WORKFLOW
 # =========================================================
 
-def build_loan_advisory_graph():
-    """
-    Build the supervisor-routed multi-agent loan advisory graph.
+workflow = StateGraph(LoanAdvisoryState)
 
-    Each specialized agent performs one responsibility and then
-    returns control to the Supervisor Agent. The Supervisor
-    inspects the shared state and determines the next route.
-    """
+workflow.add_node(
+    "supervisor",
+    supervisor_agent,
+)
 
-    workflow = StateGraph(LoanAdvisoryState)
+workflow.add_node(
+    "data_retrieval",
+    data_retrieval_agent,
+)
 
-    # -----------------------------------------------------
-    # REGISTER AGENTS
-    # -----------------------------------------------------
+workflow.add_node(
+    "risk_analysis",
+    risk_analysis_agent,
+)
 
-    workflow.add_node(
-        "supervisor",
-        supervisor_agent
-    )
+workflow.add_node(
+    "underwriting",
+    underwriting_agent,
+)
 
-    workflow.add_node(
-        "data_retrieval",
-        data_retrieval_agent
-    )
+workflow.add_node(
+    "policy_rag",
+    policy_agent,
+)
 
-    workflow.add_node(
-        "risk_analysis",
-        risk_analysis_agent
-    )
-
-    workflow.add_node(
-        "underwriting",
-        underwriting_agent
-    )
-
-    workflow.add_node(
-        "policy_rag",
-        policy_agent
-    )
-
-    workflow.add_node(
-        "explanation",
-        explanation_agent
-    )
-
-    # -----------------------------------------------------
-    # ENTRY POINT
-    # -----------------------------------------------------
-
-    workflow.add_edge(
-        START,
-        "supervisor"
-    )
-
-    # -----------------------------------------------------
-    # CONDITIONAL SUPERVISOR ROUTING
-    # -----------------------------------------------------
-
-    workflow.add_conditional_edges(
-        "supervisor",
-        route_from_supervisor,
-        {
-            "data_retrieval": "data_retrieval",
-            "risk_analysis": "risk_analysis",
-            "underwriting": "underwriting",
-            "policy_rag": "policy_rag",
-            "explanation": "explanation",
-            "end": END
-        }
-    )
-
-    # -----------------------------------------------------
-    # RETURN CONTROL TO SUPERVISOR
-    # -----------------------------------------------------
-
-    workflow.add_edge(
-        "data_retrieval",
-        "supervisor"
-    )
-
-    workflow.add_edge(
-        "risk_analysis",
-        "supervisor"
-    )
-
-    workflow.add_edge(
-        "underwriting",
-        "supervisor"
-    )
-
-    workflow.add_edge(
-        "policy_rag",
-        "supervisor"
-    )
-
-    workflow.add_edge(
-        "explanation",
-        "supervisor"
-    )
-
-    return workflow.compile()
+workflow.add_node(
+    "explanation",
+    explanation_agent,
+)
 
 
-# =========================================================
+# ---------------------------------------------------------
+# ENTRY POINT
+# ---------------------------------------------------------
+
+workflow.set_entry_point("supervisor")
+
+
+# ---------------------------------------------------------
+# SUPERVISOR CONDITIONAL ROUTING
+# ---------------------------------------------------------
+
+workflow.add_conditional_edges(
+    "supervisor",
+    route_from_supervisor,
+    {
+        "data_retrieval": "data_retrieval",
+        "risk_analysis": "risk_analysis",
+        "underwriting": "underwriting",
+        "policy_rag": "policy_rag",
+        "explanation": "explanation",
+        "end": END,
+    },
+)
+
+
+# ---------------------------------------------------------
+# RETURN EACH SPECIALIST AGENT TO SUPERVISOR
+# ---------------------------------------------------------
+
+workflow.add_edge(
+    "data_retrieval",
+    "supervisor",
+)
+
+workflow.add_edge(
+    "risk_analysis",
+    "supervisor",
+)
+
+workflow.add_edge(
+    "underwriting",
+    "supervisor",
+)
+
+workflow.add_edge(
+    "policy_rag",
+    "supervisor",
+)
+
+workflow.add_edge(
+    "explanation",
+    "supervisor",
+)
+
+
+# ---------------------------------------------------------
 # COMPILE GRAPH
+# ---------------------------------------------------------
+
+loan_advisory_graph = workflow.compile()
+
+
 # =========================================================
-
-loan_advisory_graph = build_loan_advisory_graph()
-
-
-# =========================================================
-# PUBLIC WORKFLOW FUNCTION
+# RUN COMPLETE LOAN ADVISORY WORKFLOW
 # =========================================================
 
 def run_loan_advisory(
     customer_id,
     product_id,
     requested_amount,
-    requested_tenure
+    requested_tenure,
+    persist_to_database=True,
 ):
     """
-    Execute the complete supervisor-routed multi-agent workflow.
+    Run the complete multi-agent loan advisory workflow.
+
+    When persist_to_database is True:
+
+    1. Create the application in PostgreSQL.
+    2. Run the LangGraph multi-agent workflow.
+    3. Update the application with the assessment results.
+    4. Persist the complete audit trail.
+
+    Unit tests can set persist_to_database=False so that
+    PostgreSQL is not required.
     """
+
+    application_id = None
+
+    # -----------------------------------------------------
+    # CREATE PERSISTENT APPLICATION
+    # -----------------------------------------------------
+
+    if persist_to_database:
+        application_id = create_loan_application(
+            customer_id=customer_id,
+            product_id=product_id,
+            requested_amount=requested_amount,
+            requested_tenure=requested_tenure,
+        )
+
+    # -----------------------------------------------------
+    # INITIAL LANGGRAPH STATE
+    # -----------------------------------------------------
 
     initial_state = {
         "customer_id": customer_id,
         "product_id": product_id,
         "requested_amount": requested_amount,
         "requested_tenure": requested_tenure,
-        "audit_trail": []
+        "audit_trail": [],
     }
 
-    return loan_advisory_graph.invoke(
+    # -----------------------------------------------------
+    # RUN MULTI-AGENT WORKFLOW
+    # -----------------------------------------------------
+
+    result = loan_advisory_graph.invoke(
         initial_state
     )
 
+    # -----------------------------------------------------
+    # PERSIST FINAL RESULTS
+    # -----------------------------------------------------
 
-# =========================================================
-# COMMAND-LINE TEST
-# =========================================================
-
-if __name__ == "__main__":
-
-    result = run_loan_advisory(
-        customer_id="CUS001",
-        product_id="PERSONAL_FLEXI",
-        requested_amount=500000,
-        requested_tenure=60
-    )
-
-    print(
-        "\n=== SUPERVISOR-ROUTED MULTI-AGENT "
-        "LOAN ADVISORY ==="
-    )
-
-    print(
-        "\nCustomer:",
-        result["customer"]["name"]
-    )
-
-    print(
-        "Product:",
-        result["product"]["product_name"]
-    )
-
-    print(
-        "Estimated EMI:",
-        result["estimated_emi"]
-    )
-
-    print(
-        "FOIR:",
-        result["foir"]
-    )
-
-    print(
-        "Decision:",
-        result["decision"]
-    )
-
-    print(
-        "Risk:",
-        result["risk_level"]
-    )
-
-    print(
-        "\n=== AUDIT TRAIL ==="
-    )
-
-    for index, entry in enumerate(
-        result["audit_trail"],
-        start=1
-    ):
-
-        print(
-            f"\n{index}. {entry['agent']}"
+    if persist_to_database:
+        update_loan_application_result(
+            application_id=application_id,
+            estimated_emi=result["estimated_emi"],
+            foir=result["foir"],
+            risk_level=result["risk_level"],
+            risk_points=result["risk_points"],
+            decision=result["decision"],
         )
 
-        print(
-            entry["action"]
+        save_audit_logs(
+            application_id=application_id,
+            audit_trail=result["audit_trail"],
         )
 
-        if entry.get("details"):
+        # Include the PostgreSQL application ID in the
+        # returned result for the UI/API.
+        result["application_id"] = application_id
 
-            print(
-                "Details:",
-                entry["details"]
-            )
-
-    print(
-        "\n=== AI ADVISORY ==="
-    )
-
-    print(
-        result["advisory"]
-    )
+    return result

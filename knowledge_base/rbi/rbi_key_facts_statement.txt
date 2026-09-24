@@ -1,0 +1,111 @@
+RESERVE BANK OF INDIA
+REGULATORY GUIDANCE CORPUS
+
+DOCUMENT TOPIC
+Key Facts Statement (KFS) for Loans and Advances
+
+SOURCE TYPE
+RBI_REGULATORY_GUIDANCE
+
+SOURCE
+Reserve Bank of India
+
+REFERENCE
+RBI circular dated April 15, 2024:
+Key Facts Statement (KFS) for Loans & Advances
+
+IMPORTANT NOTICE
+This file is a concise educational summary of publicly available
+Reserve Bank of India regulatory guidance prepared for use in the
+Intelligent Credit Advisory System's RAG knowledge base.
+
+It is regulatory context and must not be interpreted as defining the
+prototype's internal credit-score, FOIR, risk-classification, or
+loan-eligibility thresholds.
+
+
+1. PURPOSE OF KEY FACTS STATEMENT
+
+The Key Facts Statement framework is intended to improve transparency
+and help borrowers understand important terms and costs associated
+with a loan before entering into the loan agreement.
+
+For applicable loans, regulated entities are required to provide key
+loan information to prospective borrowers in a simple and
+easy-to-understand format.
+
+
+2. APPLICABILITY
+
+The RBI framework applies to retail and MSME term loan products
+extended by regulated entities covered by the applicable RBI
+instructions.
+
+For this Intelligent Credit Advisory System, the guidance is used as
+regulatory context for borrower-facing loan explanations.
+
+
+3. KEY LOAN INFORMATION
+
+The Key Facts Statement should communicate critical information
+associated with the loan.
+
+This includes information needed by the borrower to understand the
+financial characteristics and cost of the proposed credit facility.
+
+The information should be presented clearly so that borrowers can
+make informed decisions regarding the loan.
+
+
+4. ANNUAL PERCENTAGE RATE AND COST OF CREDIT
+
+The Key Facts Statement framework requires disclosure of the Annual
+Percentage Rate, or APR, as applicable under the RBI framework.
+
+APR represents the annual cost of credit to the borrower and is
+intended to provide a more comprehensive representation of borrowing
+cost than the interest rate alone.
+
+Applicable charges forming part of the cost of credit should be
+appropriately reflected according to the RBI framework.
+
+
+5. FEES AND CHARGES
+
+Borrowers should receive appropriate information about applicable
+fees and charges.
+
+Charges that are required to be disclosed under the applicable RBI
+framework should be communicated transparently rather than being
+hidden from the borrower.
+
+This supports transparency and allows borrowers to better understand
+the overall financial implications of the loan.
+
+
+6. BORROWER UNDERSTANDING
+
+The Key Facts Statement should be provided in a simple and
+understandable form.
+
+The objective is not merely to provide information, but to make
+important loan terms and costs accessible to the borrower.
+
+This supports informed financial decision-making and comparison of
+credit products.
+
+
+7. RELATIONSHIP TO THIS PROTOTYPE
+
+The Intelligent Credit Advisory System uses this RBI guidance only as
+external regulatory context.
+
+The RBI guidance does not define the prototype's internal minimum
+credit score, FOIR thresholds, risk points, product limits, or final
+eligibility rules.
+
+Those rules are defined separately in the Synthetic Lending Policy.
+
+The Policy / RAG Agent may retrieve this document when explaining
+topics involving transparency, loan costs, borrower disclosures,
+charges, APR, or borrower-facing communication.

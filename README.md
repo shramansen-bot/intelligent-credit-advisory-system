@@ -1,18 +1,41 @@
 # Intelligent Credit Advisory System
 
-An explainable, multi-agent credit assessment and loan advisory prototype built with Python, LangGraph, Streamlit, Retrieval-Augmented Generation (RAG), and Google Gemini.
+An explainable multi-agent AI prototype for loan eligibility assessment, affordability analysis, risk evaluation, policy retrieval, and grounded credit advisory.
 
-The system combines deterministic financial calculations and rule-based underwriting with supervisor-routed agent orchestration, semantic policy retrieval, an auditable execution trail, and grounded Generative AI explanations.
+The system combines deterministic financial logic with LangGraph-based multi-agent orchestration, PostgreSQL, pgvector, Redis, FastAPI, Streamlit, and Google Gemini.
 
-> **Disclaimer:** This project is an educational prototype. The customer records, loan products, lending policies, thresholds, and assessment rules used in this repository are synthetic and do not represent the policies of any real bank, NBFC, financial institution, or regulatory authority.
+> **Educational prototype only.** This project is not connected to a real bank, NBFC, credit bureau, or regulatory authority and must not be used for real-world lending decisions.
 
 ---
 
-## 1. Project Overview
+## 1. Problem Statement
 
-Loan assessment involves multiple responsibilities including customer-data retrieval, affordability analysis, credit-risk evaluation, eligibility checking, lending-policy retrieval, explanation generation, and auditability.
+Credit assessment involves multiple responsibilities such as customer-data retrieval, affordability calculation, risk analysis, underwriting, policy interpretation, explanation, and auditability.
 
-This project demonstrates how these responsibilities can be separated into specialized agents and orchestrated using LangGraph.
+This project implements these responsibilities as a supervisor-routed multi-agent system.
+
+The solution is designed to demonstrate:
+
+- Multi-agent credit-advisory orchestration
+- Customer and loan-product data retrieval
+- EMI and FOIR-based affordability analysis
+- Credit-risk classification
+- Deterministic underwriting
+- Retrieval-Augmented Generation (RAG)
+- RBI regulatory-guidance retrieval
+- Explainable AI-generated advisory
+- PostgreSQL application and audit persistence
+- Redis caching
+- FastAPI backend services
+- Streamlit user interface
+
+The Generative AI component does **not** make the final eligibility decision. Core financial calculations, risk logic, and underwriting remain deterministic.
+
+---
+
+## 2. Key Features
+
+### Multi-Agent LangGraph Workflow
 
 The system contains six logical agents:
 
@@ -23,218 +46,214 @@ The system contains six logical agents:
 5. Policy / RAG Agent
 6. Explanation Agent
 
-The Supervisor Agent controls the workflow by inspecting the shared application state and selecting the next agent through LangGraph conditional routing.
+The Supervisor controls the execution sequence through LangGraph conditional routing.
 
-Core financial calculations and eligibility decisions remain deterministic.
+### Deterministic Financial Assessment
 
-Gemini does not decide whether a customer is eligible for a loan. It is used for semantic embeddings and for generating a grounded natural-language explanation of an already-completed assessment.
+The system calculates:
 
----
-
-## 2. Problem Statement and Solution Approach
-
-Credit assessment requires information from multiple sources and involves several distinct analytical responsibilities.
-
-A useful credit advisory system should be able to:
-
-- Retrieve relevant customer and product information
-- Evaluate affordability
-- Calculate EMI and FOIR
-- Analyze risk indicators
-- Apply underwriting and eligibility rules
-- Retrieve relevant lending-policy information
-- Explain the assessment
-- Maintain an auditable record of workflow execution
-
-The Intelligent Credit Advisory System addresses these requirements using a supervisor-routed multi-agent architecture.
-
-### Deterministic Decision Layer
-
-Python modules perform:
-
-- EMI calculation
-- FOIR calculation
-- Credit-score evaluation
-- KYC checks
-- Income-proof verification
-- Employment-type checks
-- Fraud-review checks
-- Loan-amount validation
-- Loan-tenure validation
-- Risk scoring
-- Eligibility determination
-
-These modules produce the actual assessment result.
-
-### Multi-Agent Orchestration Layer
-
-LangGraph coordinates specialized agents through shared state.
-
-Each agent performs a specific responsibility and returns control to the Supervisor Agent.
-
-The Supervisor inspects the updated state and determines which agent should execute next.
-
-### RAG and Explanation Layer
-
-Relevant sections of a synthetic lending-policy knowledge base are retrieved using Gemini embeddings and cosine similarity.
-
-The retrieved policy context and deterministic assessment are then supplied to the Explanation Agent.
-
-Gemini generates a user-friendly explanation but is explicitly instructed not to modify the calculated decision.
-
----
-
-## 3. Key Features
-
-### Supervisor-Routed Multi-Agent Workflow
-
-The application uses LangGraph to orchestrate six logical agents.
-
-The Supervisor Agent performs deterministic routing based on the contents of the shared workflow state.
-
-After every specialized agent completes its task, execution returns to the Supervisor.
-
-### Explainable Loan Eligibility
-
-Instead of returning only:
-
-```text
-ELIGIBLE
-```
-
-or:
-
-```text
-NOT ELIGIBLE
-```
-
-the system identifies the specific eligibility rules that failed.
-
-Example:
-
-```text
-Credit score is below the minimum requirement.
-FOIR exceeds the maximum permitted limit.
-```
-
-### Affordability Analysis
-
-The deterministic financial engine supports:
-
-- Estimated monthly EMI
+- Estimated EMI
 - FOIR
-- Disposable income
-- Maximum affordable EMI
+- Risk points
+- Risk level
+- Eligibility decision
+- Eligibility/rejection reasons
 
-### Risk Assessment
+These calculations are implemented in Python rather than delegated to an LLM.
 
-A separate prototype risk model classifies applications as:
+### PostgreSQL System of Record
 
-```text
-LOW
-MEDIUM
-HIGH
-```
+PostgreSQL stores:
 
-Risk classification and eligibility are deliberately kept separate.
+- Customers
+- Loan products
+- Loan applications
+- Multi-agent audit logs
+- Policy chunks and embeddings
 
-### Retrieval-Augmented Generation
+### pgvector Semantic Retrieval
 
-Relevant policy sections are retrieved from a synthetic lending-policy knowledge base using semantic embeddings.
+Policy-document embeddings are stored using PostgreSQL's `pgvector` extension.
 
-The retrieved sections are supplied as context to the Explanation Agent.
+The Policy / RAG Agent retrieves relevant policy sections using vector similarity.
 
-### Agent Audit Trail
+### Regulatory-Guidance Knowledge Base
 
-Every agent records information about its execution.
+The RAG knowledge base contains:
 
-The audit trail includes:
+- Internal synthetic lending policy
+- Educational summary of RBI Key Facts Statement guidance
+- Educational summary of RBI Fair Practices Code guidance
 
-- Supervisor routing decisions
-- Data retrieval activity
-- Affordability and risk calculations
-- Underwriting results
-- Policy retrieval activity
-- Explanation generation
+The RBI knowledge files are concise educational summaries based on public regulatory guidance. They are not represented as verbatim reproductions of RBI documents.
 
-A complete successful workflow currently produces 11 execution and routing events across six logical agents.
+### Gemini Integration
 
-### Persistent Embedding Cache
+Google Gemini is used for:
 
-Policy embeddings are stored locally after initial generation.
+- Policy embeddings
+- Query embeddings
+- Grounded natural-language credit advisory
 
-This prevents document embeddings from being regenerated every time the application starts.
+### Persistent Audit Trail
 
-The generated cache is excluded from Git and can be rebuilt automatically.
+Every specialist-agent action and Supervisor routing decision is recorded.
 
-### Interactive Streamlit Interface
+A complete standard workflow produces 11 execution/routing events across six logical agents.
+
+Audit events are persisted in PostgreSQL and linked to the corresponding loan application.
+
+### Redis Cache
+
+Completed assessment responses are temporarily cached in Redis by application ID.
+
+Redis is treated as a cache rather than the system of record. If Redis is unavailable, the main assessment workflow can continue using PostgreSQL.
+
+### FastAPI Backend
+
+FastAPI provides the service layer between the Streamlit frontend and the credit-advisory workflow.
+
+### Streamlit Interface
 
 Users can:
 
 - Select a synthetic customer
 - Select a synthetic loan product
-- Enter a requested loan amount
-- Select a requested tenure
-- Run the complete multi-agent assessment
+- Enter requested loan amount
+- Enter requested tenure
+- Run the multi-agent assessment
 - View EMI and FOIR
-- View eligibility and rejection reasons
-- View risk classification and risk factors
-- View the AI Credit Advisory
+- View eligibility and risk
+- View the AI advisory
 - Inspect retrieved policy context
-- Inspect the complete agent execution and audit trail
-- View the multi-agent architecture
+- Inspect the multi-agent audit trail
+- View the generated application ID
 
 ---
 
-## 4. Multi-Agent System Architecture
-
-The application uses a shared LangGraph state and a Supervisor Agent for conditional routing.
+## 3. System Architecture
 
 ```text
-                     START
+                     User
+                       |
+                       v
+                Streamlit UI
+                       |
+                    HTTP
+                       |
+                       v
+                   FastAPI
+                       |
+                       v
+               LangGraph Workflow
                        |
                        v
                 Supervisor Agent
                        |
                        v
-              Data Retrieval Agent
+             Data Retrieval Agent
                        |
                        v
                   Supervisor
                        |
                        v
-               Risk Analysis Agent
+              Risk Analysis Agent
                        |
                        v
                   Supervisor
                        |
                        v
-         Underwriting Decision Agent
+        Underwriting Decision Agent
                        |
                        v
                   Supervisor
                        |
                        v
-               Policy / RAG Agent
+              Policy / RAG Agent
                        |
                        v
                   Supervisor
                        |
                        v
-              Explanation Agent
+             Explanation Agent
                        |
                        v
                   Supervisor
                        |
                        v
                       END
+
+
+        PostgreSQL + pgvector
+                 ^
+                 |
+              FastAPI
+                 |
+                 v
+            Redis Cache
 ```
 
-The specialized agents do not directly decide which agent runs next.
+PostgreSQL acts as the persistent system of record.
 
-Instead, each specialized agent returns control to the Supervisor.
+pgvector provides vector storage and semantic policy retrieval.
 
-LangGraph conditional edges then route execution according to the Supervisor's `next_agent` decision.
+Redis provides temporary caching.
+
+FastAPI exposes the application services.
+
+Streamlit provides the user interface.
+
+---
+
+## 4. Multi-Agent Workflow
+
+The LangGraph workflow follows this route:
+
+```text
+START
+  |
+  v
+Supervisor
+  |
+  v
+Data Retrieval
+  |
+  v
+Supervisor
+  |
+  v
+Risk Analysis
+  |
+  v
+Supervisor
+  |
+  v
+Underwriting
+  |
+  v
+Supervisor
+  |
+  v
+Policy / RAG
+  |
+  v
+Supervisor
+  |
+  v
+Explanation
+  |
+  v
+Supervisor
+  |
+  v
+END
+```
+
+Each specialist agent returns control to the Supervisor.
+
+The Supervisor examines the shared workflow state and determines the next stage.
+
+The routing sequence is deterministic, making execution predictable, testable, and auditable.
 
 ---
 
@@ -242,42 +261,31 @@ LangGraph conditional edges then route execution according to the Supervisor's `
 
 ### Supervisor Agent
 
-The Supervisor Agent inspects the shared workflow state and determines the next required stage.
+Controls workflow routing based on the current LangGraph state.
 
-Typical routing sequence:
+Typical routing:
 
 ```text
 data_retrieval
-      |
-      v
+      ↓
 risk_analysis
-      |
-      v
+      ↓
 underwriting
-      |
-      v
+      ↓
 policy_rag
-      |
-      v
+      ↓
 explanation
-      |
-      v
+      ↓
 end
 ```
 
-The routing logic is deterministic rather than LLM-controlled.
-
-This makes workflow execution predictable, testable, and auditable.
+The Supervisor also records routing events in the audit trail.
 
 ### Data Retrieval Agent
 
-Responsible for:
+Retrieves the selected customer and loan product from PostgreSQL.
 
-- Loading synthetic customer data
-- Loading synthetic loan-product data
-- Selecting the requested customer
-- Selecting the requested loan product
-- Recording retrieval information in the audit trail
+It provides the data required by downstream agents and records the retrieval operation in the audit trail.
 
 ### Risk Analysis Agent
 
@@ -285,15 +293,13 @@ Responsible for:
 
 - EMI calculation
 - FOIR calculation
-- Credit-risk scoring
+- Risk-point calculation
 - Risk classification
 - Risk-factor identification
 
-The agent reuses the existing deterministic affordability and risk modules.
-
 ### Underwriting Decision Agent
 
-Responsible for applying configured eligibility rules.
+Applies deterministic eligibility rules.
 
 Checks include:
 
@@ -303,11 +309,11 @@ Checks include:
 - KYC status
 - Income-proof verification
 - Fraud-review status
-- Requested amount
+- Requested loan amount
 - Requested tenure
 - FOIR
 
-The output is either:
+The resulting decision is:
 
 ```text
 ELIGIBLE
@@ -319,78 +325,186 @@ or:
 NOT ELIGIBLE
 ```
 
-together with applicable reasons.
+with corresponding reasons.
 
 ### Policy / RAG Agent
 
-Responsible for constructing an assessment-specific retrieval query and retrieving relevant policy sections.
+Constructs an assessment-specific semantic query and retrieves relevant policy context.
 
-The retrieval pipeline uses:
+It retrieves context from both:
 
-- Gemini embeddings
-- Locally cached policy embeddings
-- Cosine similarity
-- Top-k semantic retrieval
+- Internal lending policy
+- RBI regulatory-guidance knowledge
+
+This prevents regulatory context from being unintentionally crowded out by internal policy results.
 
 ### Explanation Agent
 
-Responsible for producing a natural-language explanation of the completed assessment.
+Produces the final natural-language credit advisory.
 
-It receives:
+It receives the already-completed deterministic assessment and retrieved policy context.
 
-- Customer information
-- Product information
+The Explanation Agent does not independently change:
+
+- Eligibility
 - EMI
 - FOIR
-- Eligibility result
-- Eligibility reasons
-- Risk classification
-- Risk factors
-- Retrieved policy context
-
-The Explanation Agent is instructed not to override or independently recalculate the deterministic assessment.
+- Risk points
+- Risk level
+- Rejection reasons
 
 ---
 
-## 6. Shared LangGraph State
+## 6. Affordability Calculation
 
-The agents communicate through a shared `LoanAdvisoryState`.
+### EMI
 
-The state contains information such as:
+Estimated EMI is calculated using the standard reducing-balance loan formula.
+
+The calculation is deterministic.
+
+### FOIR
+
+This prototype uses:
 
 ```text
-customer_id
-product_id
-requested_amount
-requested_tenure
-
-customer
-product
-
-estimated_emi
-foir
-
-risk_level
-risk_points
-risk_factors
-
-decision
-reasons
-
-retrieved_policy
-advisory
-
-next_agent
-audit_trail
+       Existing Monthly Obligations + Proposed Loan EMI
+FOIR = ------------------------------------------------- × 100
+                       Monthly Net Income
 ```
 
-Each agent reads the fields it requires and returns new information to the shared state.
-
-The Supervisor uses the presence or absence of state fields to determine the next route.
+The resulting FOIR is compared with the configured maximum FOIR for the selected loan product.
 
 ---
 
-## 7. Project Structure
+## 7. Risk Assessment
+
+Risk assessment is kept separate from the final eligibility decision.
+
+The prototype assigns risk points using configured credit-score and affordability conditions.
+
+The resulting risk classifications are:
+
+```text
+0 points       -> LOW
+1 to 2 points  -> MEDIUM
+3+ points      -> HIGH
+```
+
+These thresholds are synthetic and are used only for this educational prototype.
+
+---
+
+## 8. RAG and Policy Retrieval
+
+The Policy / RAG Agent uses semantic retrieval to find policy context relevant to the current assessment.
+
+```text
+Policy Knowledge Files
+        |
+        v
+     Chunking
+        |
+        v
+Gemini Embeddings
+        |
+        v
+PostgreSQL + pgvector
+        |
+        v
+Assessment Query
+        |
+        v
+Gemini Query Embedding
+        |
+        v
+Vector Similarity Search
+        |
+        v
+Relevant Policy Context
+        |
+        v
+Explanation Agent
+```
+
+The policy knowledge base contains:
+
+```text
+knowledge_base/
+|-- lending_policy.txt
+`-- rbi/
+    |-- rbi_key_facts_statement.txt
+    `-- rbi_fair_practices_code.txt
+```
+
+The internal policy contains synthetic lending criteria used by the prototype.
+
+The RBI files contain educational summaries of public regulatory guidance and are used as additional grounding context.
+
+Synthetic underwriting thresholds in this project must not be interpreted as RBI-prescribed lending thresholds.
+
+---
+
+## 9. PostgreSQL Database
+
+The project uses the following tables:
+
+### `customers`
+
+Stores synthetic customer profiles.
+
+### `loan_products`
+
+Stores synthetic loan-product definitions and eligibility parameters.
+
+### `loan_applications`
+
+Stores submitted applications and completed assessment results.
+
+### `audit_logs`
+
+Stores Supervisor routing events and specialist-agent activity for each application.
+
+### `policy_chunks`
+
+Stores policy chunks, source metadata, and 768-dimensional Gemini embeddings using pgvector.
+
+---
+
+## 10. Redis
+
+Redis provides temporary assessment caching.
+
+Completed assessments are cached using the generated application ID.
+
+Redis is not the permanent system of record.
+
+If Redis is unavailable, assessment execution and PostgreSQL persistence can continue.
+
+---
+
+## 11. FastAPI
+
+The FastAPI backend exposes the following endpoints:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Service information |
+| GET | `/health` | API and Redis health |
+| GET | `/customers` | Retrieve available customers |
+| GET | `/loan-products` | Retrieve available loan products |
+| POST | `/assess` | Run and persist a loan assessment |
+| GET | `/assessments/{application_id}/cache` | Retrieve a cached assessment |
+
+Interactive FastAPI documentation is available while the server is running at:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## 12. Project Structure
 
 ```text
 intelligent-credit-advisory-system/
@@ -408,6 +522,10 @@ intelligent-credit-advisory-system/
 |   |-- explanation_agent.py
 |   `-- workflow.py
 |
+|-- api/
+|   |-- __init__.py
+|   `-- main.py
+|
 |-- data/
 |   |-- customers.json
 |   `-- loan_products.json
@@ -415,26 +533,34 @@ intelligent-credit-advisory-system/
 |-- engine/
 |   |-- __init__.py
 |   |-- affordability.py
+|   |-- ai_advisor.py
 |   |-- assessment.py
+|   |-- database.py
+|   |-- database_repository.py
 |   |-- data_loader.py
 |   |-- eligibility.py
-|   |-- risk.py
-|   |-- ai_advisor.py
 |   |-- policy_loader.py
-|   `-- policy_retriever.py
+|   |-- policy_retriever.py
+|   `-- redis_client.py
 |
 |-- knowledge_base/
-|   `-- lending_policy.txt
+|   |-- lending_policy.txt
+|   `-- rbi/
+|       |-- rbi_fair_practices_code.txt
+|       `-- rbi_key_facts_statement.txt
+|
+|-- scripts/
+|   |-- init_database.py
+|   |-- seed_database.py
+|   `-- ingest_rbi_policies.py
 |
 |-- tests/
 |   |-- test_affordability.py
 |   |-- test_agents.py
 |   |-- test_ai_advisor.py
+|   |-- test_api.py
 |   |-- test_assessment.py
 |   `-- test_risk.py
-|
-|-- vector_store/
-|   `-- policy_embeddings.json
 |
 |-- .env.example
 |-- .gitignore
@@ -442,103 +568,83 @@ intelligent-credit-advisory-system/
 `-- README.md
 ```
 
-`vector_store/policy_embeddings.json` is generated locally and is intentionally excluded from version control.
+The local `.venv`, `.env`, Python caches, test caches, and generated vector-store cache are intentionally excluded from version control.
 
 ---
 
-## 8. Technology Stack
+## 13. Technology Stack
 
 - Python
 - LangGraph
-- Streamlit
-- Google Gemini API
-- Google GenAI Python SDK
+- Google Gemini
 - Gemini Embeddings
-- Retrieval-Augmented Generation
+- PostgreSQL
+- pgvector
+- Redis
+- FastAPI
+- Uvicorn
+- Streamlit
+- HTTPX
 - Pytest
 - python-dotenv
-- JSON
-- Git
-- GitHub
+- Git / GitHub
 
 ---
 
-## 9. Prerequisites
+## 14. Prerequisites
 
-Before running the project, ensure the following are installed:
+Before running the project, install:
 
 - Python
 - Git
-- pip
-- A Google Gemini API key for live RAG and AI advisory functionality
+- PostgreSQL
+- pgvector for the installed PostgreSQL server
+- Docker Desktop or another accessible Redis installation
+- A Google Gemini API key
 
-A Python virtual environment is recommended.
+The project was developed and tested on Windows with Python 3.14.
 
 ---
 
-## 10. Installation and Setup
+## 15. Installation
 
-### Step 1: Clone the Repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/shramansen-bot/intelligent-credit-advisory-system.git
 ```
 
-Move into the project directory:
+Enter the project directory:
 
 ```bash
 cd intelligent-credit-advisory-system
 ```
 
-### Step 2: Create a Virtual Environment
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-### Step 3: Activate the Virtual Environment
+Install the dependencies.
 
-#### Windows PowerShell
+### Windows PowerShell
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-> **PowerShell note:** On some Windows systems, the execution policy may prevent `Activate.ps1` from running. The project can still be used without changing the system execution policy.
-
-Install dependencies without activation:
+Activation is optional. Dependencies can be installed directly with:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Run the tests without activation:
+### macOS/Linux
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-```
-
-Run Streamlit without activation:
-
-```powershell
-.\.venv\Scripts\python.exe -m streamlit run app.py
-```
-
-#### Windows Command Prompt
-
-```cmd
-.venv\Scripts\activate
-```
-
-#### macOS/Linux
+Activate the environment:
 
 ```bash
 source .venv/bin/activate
 ```
 
-### Step 4: Install Dependencies
-
-If the virtual environment is activated:
+Then:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -546,297 +652,247 @@ python -m pip install -r requirements.txt
 
 ---
 
-## 11. Environment Configuration
+## 16. Environment Configuration
 
-The project uses an environment variable for the Gemini API key.
-
-A template is provided:
+The repository contains:
 
 ```text
 .env.example
 ```
 
-Create a new `.env` file in the project root.
+Create a local `.env` file based on this template.
 
-Example:
+Required configuration:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=credit_advisory_db
+DB_USER=postgres
+DB_PASSWORD=your_postgresql_password_here
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+API_BASE_URL=http://127.0.0.1:8000
 ```
 
-Replace the placeholder with a valid Gemini API key.
-
-### Gemini API Key Requirements
-
-A Gemini API key is required when the application needs to:
-
-- Generate policy-document embeddings
-- Generate query embeddings
-- Perform semantic policy retrieval
-- Generate the AI Credit Advisory
-
-The deterministic Python modules and mocked automated tests do not require a live Gemini API key.
-
-### Security
+Replace placeholders with the appropriate local values.
 
 Never commit the real `.env` file.
 
-The repository's `.gitignore` excludes:
-
-```text
-.env
-```
-
-Only `.env.example`, containing no real secret, should be committed.
+The repository's `.gitignore` excludes `.env`.
 
 ---
 
-## 12. Running the Application
+## 17. PostgreSQL and pgvector Setup
 
-With the virtual environment activated:
+Create a PostgreSQL database named:
 
-```bash
-streamlit run app.py
+```text
+credit_advisory_db
 ```
 
-If PowerShell activation is unavailable:
+The PostgreSQL server must have the `pgvector` extension installed before database initialization.
+
+After configuring the database credentials in `.env`, initialize the database.
+
+### Windows
+
+```powershell
+.\.venv\Scripts\python.exe scripts\init_database.py
+```
+
+### macOS/Linux
+
+```bash
+python scripts/init_database.py
+```
+
+The initialization script:
+
+- Enables the `vector` extension
+- Creates `customers`
+- Creates `loan_products`
+- Creates `loan_applications`
+- Creates `audit_logs`
+- Creates `policy_chunks`
+
+---
+
+## 18. Seed the Database
+
+Seed the synthetic customers and loan products.
+
+### Windows
+
+```powershell
+.\.venv\Scripts\python.exe scripts\seed_database.py
+```
+
+### macOS/Linux
+
+```bash
+python scripts/seed_database.py
+```
+
+The seeding operation is designed to insert or update the supplied synthetic customer and product records.
+
+---
+
+## 19. Ingest Policy Knowledge
+
+The internal lending policy is indexed by the policy-retrieval layer when required.
+
+To ingest the RBI regulatory-guidance knowledge files into PostgreSQL + pgvector, run:
+
+### Windows
+
+```powershell
+.\.venv\Scripts\python.exe scripts\ingest_rbi_policies.py
+```
+
+### macOS/Linux
+
+```bash
+python scripts/ingest_rbi_policies.py
+```
+
+This process:
+
+1. Loads the RBI educational guidance files.
+2. Splits them into sections.
+3. Generates Gemini embeddings.
+4. Stores the chunks and embeddings in PostgreSQL using pgvector.
+
+A valid `GEMINI_API_KEY` and internet connection are required for live embedding generation.
+
+---
+
+## 20. Start Redis
+
+The project uses Redis as a cache.
+
+A simple Docker-based Redis instance can be started with:
+
+```bash
+docker run -d --name credit-advisory-redis -p 6379:6379 redis:7-alpine
+```
+
+If the container already exists but is stopped:
+
+```bash
+docker start credit-advisory-redis
+```
+
+Check Redis:
+
+```bash
+docker exec credit-advisory-redis redis-cli ping
+```
+
+Expected response:
+
+```text
+PONG
+```
+
+Redis is designed as a non-critical cache. PostgreSQL remains the persistent system of record.
+
+---
+
+## 21. Run FastAPI
+
+FastAPI must be running before the Streamlit frontend performs assessments.
+
+### Windows
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
+```
+
+### macOS/Linux
+
+```bash
+python -m uvicorn api.main:app --reload
+```
+
+The API is normally available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+FastAPI Swagger documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Keep this terminal running.
+
+---
+
+## 22. Run Streamlit
+
+Open another terminal.
+
+### Windows
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-Streamlit normally starts the application at:
+### macOS/Linux
+
+```bash
+python -m streamlit run app.py
+```
+
+Streamlit normally opens at:
 
 ```text
 http://localhost:8501
 ```
 
-Use the address displayed by Streamlit in the terminal.
+The Streamlit application retrieves customers and loan products from FastAPI and submits assessments through the `/assess` endpoint.
 
 ---
 
-## 13. Running the Multi-Agent Workflow Directly
+## 23. Typical Usage
 
-The LangGraph workflow can also be executed without Streamlit:
+1. Start PostgreSQL.
+2. Start Redis.
+3. Start FastAPI.
+4. Start Streamlit.
+5. Select a customer.
+6. Select a loan product.
+7. Enter the requested loan amount.
+8. Enter the requested tenure.
+9. Click **Run Multi-Agent Loan Assessment**.
 
-```bash
-python -m agents.workflow
-```
+The result displays:
 
-On Windows without virtual-environment activation:
-
-```powershell
-.\.venv\Scripts\python.exe -m agents.workflow
-```
-
-This displays:
-
-- Customer
-- Loan product
-- EMI
+- Application ID
+- Estimated EMI
 - FOIR
 - Eligibility
+- Eligibility reasons
 - Risk level
-- Complete agent audit trail
-- AI advisory
+- Risk factors
+- AI credit advisory
+- Retrieved policy context
+- Multi-agent audit trail
 
-This is useful for testing the orchestration layer independently from the UI.
-
----
-
-## 14. Application Workflow
-
-The user:
-
-1. Selects a synthetic customer.
-2. Selects a synthetic loan product.
-3. Enters a requested loan amount.
-4. Selects a requested tenure.
-5. Clicks **Run Multi-Agent Loan Assessment**.
-
-LangGraph then begins the workflow.
-
-The Supervisor first routes execution to the Data Retrieval Agent.
-
-The Data Retrieval Agent loads the selected customer and product and returns control to the Supervisor.
-
-The Supervisor routes to the Risk Analysis Agent, which calculates EMI, FOIR, risk points, risk factors, and risk level.
-
-Control returns to the Supervisor, which routes to the Underwriting Decision Agent.
-
-The Underwriting Decision Agent applies deterministic eligibility rules and returns the decision and reasons.
-
-The Supervisor then routes to the Policy / RAG Agent.
-
-The Policy / RAG Agent retrieves relevant sections from the synthetic lending-policy knowledge base.
-
-The Supervisor routes to the Explanation Agent.
-
-The Explanation Agent generates a grounded natural-language advisory.
-
-Finally, control returns to the Supervisor, which detects that all required outputs are present and routes the graph to `END`.
+The application and audit events are persisted in PostgreSQL.
 
 ---
 
-## 15. Eligibility Checks
+## 24. Auditability
 
-The prototype evaluates conditions including:
-
-- Customer age
-- Credit score
-- Employment type
-- KYC verification
-- Income-proof verification
-- Fraud-review flag
-- Requested loan amount
-- Requested tenure
-- FOIR
-
-An applicant is classified as `ELIGIBLE` only when all applicable configured eligibility checks pass.
-
-If one or more checks fail, the system returns:
-
-```text
-NOT ELIGIBLE
-```
-
-together with the corresponding reasons.
-
----
-
-## 16. Affordability Calculation
-
-### EMI
-
-The application calculates estimated EMI using the standard reducing-balance loan formula.
-
-The calculation is performed deterministically in Python.
-
-### FOIR
-
-For this prototype:
-
-```text
-       Existing Monthly Obligations + Proposed Loan EMI
-FOIR = ------------------------------------------------- x 100
-                       Monthly Net Income
-```
-
-The calculated FOIR is compared with the maximum FOIR configured for the selected synthetic loan product.
-
----
-
-## 17. Risk Assessment
-
-Risk assessment is intentionally separate from eligibility.
-
-The prototype assigns risk points based on configured credit-score and FOIR thresholds.
-
-The resulting classifications are:
-
-```text
-0 points       -> LOW
-1 to 2 points  -> MEDIUM
-3+ points      -> HIGH
-```
-
-A risk classification does not independently determine eligibility.
-
-These thresholds are synthetic and exist only for demonstration.
-
----
-
-## 18. RAG and Policy Retrieval
-
-The project implements a lightweight Retrieval-Augmented Generation workflow.
-
-The synthetic policy document is stored at:
-
-```text
-knowledge_base/lending_policy.txt
-```
-
-The retrieval workflow is:
-
-```text
-Synthetic Policy Document
-          |
-          v
- Section-Based Chunking
-          |
-          v
- Gemini Document Embeddings
-          |
-          v
- Local Embedding Cache
-          |
-          v
-Assessment-Based Retrieval Query
-          |
-          v
- Gemini Query Embedding
-          |
-          v
-    Cosine Similarity
-          |
-          v
- Top Relevant Policy Sections
-          |
-          v
-    Explanation Agent
-```
-
-Cosine similarity compares the assessment-specific query embedding with the policy-section embeddings.
-
-The highest-scoring sections are supplied to the Explanation Agent.
-
-### Local Embedding Cache
-
-Generated policy embeddings are stored at:
-
-```text
-vector_store/policy_embeddings.json
-```
-
-This file is generated automatically and excluded from GitHub through `.gitignore`.
-
-If the cache does not exist, a new embedding index is generated when semantic retrieval is first required.
-
----
-
-## 19. AI Grounding and Decision Safety
-
-The Generative AI component is not the underwriting decision engine.
-
-The Explanation Agent receives an already-completed deterministic assessment.
-
-Its prompt restricts the model to:
-
-1. The deterministic assessment information.
-2. The retrieved synthetic policy context.
-
-The AI is instructed not to:
-
-- Change the eligibility result
-- Recalculate or modify EMI
-- Recalculate or modify FOIR
-- Change risk points
-- Change the risk level
-- Invent rejection reasons
-- Introduce unsupported lending rules
-- Introduce unsupported regulatory requirements
-
-This design separates deterministic financial decision logic from Generative AI explanation.
-
----
-
-## 20. Audit Trail and Explainability
-
-Every agent contributes an audit entry to the shared workflow state.
-
-The Supervisor also records every routing decision.
-
-For a complete workflow, the expected execution sequence is:
+A successful standard workflow records the following logical sequence:
 
 ```text
 1.  Supervisor Agent -> data_retrieval
@@ -852,79 +908,34 @@ For a complete workflow, the expected execution sequence is:
 11. Supervisor Agent -> end
 ```
 
-The Streamlit interface exposes these events through expandable audit entries.
-
-The current audit trail exists in the workflow state for the active assessment.
-
-It is not currently persisted to an external database.
+These events are returned to the UI and persisted in the PostgreSQL `audit_logs` table against the generated application ID.
 
 ---
 
-## 21. Lazy Gemini Initialization
+## 25. AI Grounding and Decision Separation
 
-Gemini clients are initialized only when Gemini functionality is required.
+Generative AI is deliberately separated from deterministic underwriting.
 
-Importing the deterministic modules does not require a Gemini API key.
+Gemini receives the completed assessment and retrieved policy context.
 
-This allows deterministic modules and mocked automated tests to operate without connecting to Gemini.
+The AI is not responsible for changing:
 
-When live embedding or explanation functionality is requested, the application checks for `GEMINI_API_KEY` and initializes the required client.
+- EMI
+- FOIR
+- Eligibility
+- Risk points
+- Risk level
+- Rejection reasons
 
----
+This design allows natural-language explanation while keeping the core lending logic deterministic and auditable.
 
-## 22. Testing
-
-The project includes automated tests using `pytest`.
-
-Run:
-
-```bash
-python -m pytest
-```
-
-On Windows PowerShell systems where virtual-environment activation is blocked:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-```
-
-The test suite covers:
-
-- EMI calculation
-- FOIR calculation
-- Disposable-income calculation
-- Maximum-affordable-EMI calculation
-- Eligible applications
-- Ineligible applications
-- Invalid customer handling
-- Invalid product handling
-- LOW risk classification
-- MEDIUM risk classification
-- HIGH risk classification
-- AI advisory integration using mocked external components
-- Data Retrieval Agent behavior
-- Risk Analysis Agent behavior
-- Underwriting Decision Agent behavior
-- Supervisor initial routing
-- Complete supervisor-routed LangGraph execution
-- Supervisor routing order
-- Multi-agent audit-trail sequencing
-
-External Gemini operations are mocked in the relevant automated workflow tests.
-
-Therefore, the automated test suite can run without a live Gemini request or API key.
-
-Current expected result:
-
-```text
-17 passed
-```
+If the Gemini generation service is temporarily unavailable, the system can return a fallback advisory message without changing the deterministic assessment result.
 
 ---
 
-## 23. Synthetic Data
+## 26. Synthetic Data and Responsible Use
 
-All customer profiles in:
+The customer records in:
 
 ```text
 data/customers.json
@@ -932,7 +943,7 @@ data/customers.json
 
 are fictional.
 
-All loan products in:
+The loan products in:
 
 ```text
 data/loan_products.json
@@ -940,165 +951,158 @@ data/loan_products.json
 
 are synthetic.
 
-The policy document:
+The internal lending rules in:
 
 ```text
 knowledge_base/lending_policy.txt
 ```
 
-was created specifically for this educational prototype.
+are synthetic.
 
-The system must not be interpreted as representing actual lending criteria used by a real financial institution.
+The RBI knowledge files are educational summaries of public regulatory guidance.
+
+The project does not represent actual underwriting criteria used by any bank, NBFC, or regulatory authority.
 
 ---
 
-## 24. External Services
+## 27. Testing
 
-### Google Gemini API
+The project uses `pytest`.
 
-The project uses Gemini services for:
+### Windows
 
-- Text embeddings for semantic policy retrieval
-- Grounded natural-language advisory generation
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
 
-A valid API key must be supplied through:
+### macOS/Linux
+
+```bash
+python -m pytest
+```
+
+The automated tests cover areas including:
+
+- EMI calculation
+- FOIR calculation
+- Affordability logic
+- Risk classification
+- Eligibility assessment
+- Multi-agent behavior
+- Supervisor routing
+- LangGraph execution
+- AI advisory integration with mocked external components
+- FastAPI behavior
+- Redis availability/unavailability behavior
+- API validation and error handling
+
+Current validated test result:
+
+```text
+28 passed
+```
+
+The test environment may display dependency deprecation warnings under Python 3.14. These warnings do not represent test failures.
+
+---
+
+## 28. External Services
+
+### Google Gemini
+
+Used for:
+
+- Document embeddings
+- Query embeddings
+- Grounded natural-language explanation
+
+Configured using:
 
 ```text
 GEMINI_API_KEY
 ```
 
-when these live capabilities are used.
+### PostgreSQL
 
-External Gemini calls are not required for the deterministic financial modules or mocked automated test suite.
+Used as the persistent system of record for application data, audit logs, customers, loan products, and policy chunks.
 
----
+### pgvector
 
-## 25. Error Handling
+Used to store and search policy embeddings.
 
-### Gemini Service Availability
+### Redis
 
-If the Gemini generation service is temporarily unavailable because of high demand, the Explanation Agent handles the service error and returns a user-facing message.
-
-For example:
-
-```text
-AI advisory is temporarily unavailable because the Gemini service
-is experiencing high demand. Please try again later.
-```
-
-The deterministic assessment, underwriting decision, risk result, retrieved state, and audit trail remain separate from the availability of the Generative AI explanation service.
-
-### Missing API Key
-
-If Gemini functionality is requested without a configured API key, the application reports that the required environment configuration is missing.
-
-### Invalid Customer or Product
-
-The Data Retrieval Agent validates that the requested customer and loan product exist.
-
-Invalid identifiers result in an explicit error rather than silently continuing with incorrect data.
+Used for temporary caching of completed assessment responses.
 
 ---
 
-## 26. How the Solution Addresses the Problem
-
-The project separates major credit-advisory responsibilities into specialized components.
-
-| Requirement / Concept | Implementation |
-|---|---|
-| Multi-agent orchestration | LangGraph |
-| Workflow supervision | Deterministic Supervisor Agent |
-| Conditional routing | LangGraph conditional edges |
-| Customer/product retrieval | Data Retrieval Agent |
-| DTI/FOIR-style affordability analysis | Risk Analysis Agent |
-| Credit and affordability risk | Risk Analysis Agent |
-| Underwriting | Underwriting Decision Agent |
-| Policy retrieval | Policy / RAG Agent |
-| Semantic search | Gemini Embeddings + cosine similarity |
-| Explainability | Explanation Agent |
-| Application interface | Streamlit |
-| Workflow traceability | In-memory agent audit trail |
-| Automated validation | Pytest |
-
-The implementation focuses on a self-contained educational prototype while preserving clear separation between deterministic decision logic and Generative AI explanation.
-
----
-
-## 27. Known Limitations
+## 29. Known Limitations
 
 - Customer profiles are synthetic.
-- Loan products are synthetic.
-- Lending-policy rules are synthetic.
-- The application is not connected to a real bank or NBFC.
-- It is not connected to a real credit bureau.
+- Loan products and internal underwriting rules are synthetic.
+- The system is not connected to a real bank or NBFC.
+- The system is not connected to a real credit bureau.
 - It does not perform real KYC verification.
 - It does not perform real fraud verification.
 - The risk model is intentionally simplified.
-- Gemini functionality requires internet access and an external API.
-- Gemini responses may be temporarily unavailable because of external service errors or high demand.
+- Gemini functionality depends on an external API and internet connectivity.
+- The RBI knowledge files are educational summaries rather than a complete regulatory corpus.
 - Semantic retrieval may not retrieve every potentially relevant policy section.
-- The embedding cache is not automatically invalidated when the policy document changes.
-- The application currently uses predefined customer profiles rather than collecting a complete real applicant application.
-- The audit trail is held in application/workflow state and is not persisted to a database.
-- The project does not currently expose a FastAPI backend.
-- The project does not currently use PostgreSQL, pgvector, or Redis.
-- The knowledge base contains a synthetic policy rather than live regulatory or institution-specific policy documents.
-- The system is not intended for real lending decisions.
+- The prototype is not intended for real lending decisions.
 
 ---
 
-## 28. Future Enhancements
+## 30. Future Enhancements
 
-Possible extensions include:
+Possible future improvements include:
 
-- Persistent PostgreSQL audit logging
-- PostgreSQL system-of-record integration
-- pgvector-backed policy retrieval
-- Redis-backed workflow/session memory
-- FastAPI backend
-- Persistent customer/application history
-- Automatic embedding-cache invalidation
-- Multiple policy documents
-- Regulatory-document ingestion
-- Expanded policy-retrieval testing
-- More detailed affordability analysis
-- Additional loan products
-- User-entered applicant profiles
-- Authentication
-- Role-based access
-- Persistent workflow observability
-- Explainability dashboards
-- Cloud deployment
-- More advanced retrieval strategies
+- Integration with real authorized financial-data sources
+- Integration with authorized credit-bureau services
+- Expanded regulatory knowledge corpus
+- Authentication and role-based access
 - Human-review workflow stages
-- Additional LangGraph routing and recovery paths
+- More advanced risk models
+- More advanced retrieval and reranking
+- Production deployment and observability
+
+These enhancements are outside the scope of the current educational prototype.
 
 ---
 
-## 29. Responsible Use
+## 31. Submission Notes
 
-This application demonstrates how deterministic financial logic, multi-agent orchestration, Retrieval-Augmented Generation, and Generative AI can work together while keeping the core assessment explainable.
+The repository is designed to contain all project source code and setup instructions required to understand and run the prototype.
 
-The system is intended exclusively for educational and demonstration purposes.
+Sensitive credentials are not stored in the repository.
 
-It should not be used to approve, reject, price, or otherwise make real-world lending decisions.
+The real `.env` file is excluded through `.gitignore`.
+
+A safe `.env.example` template is provided for evaluator configuration.
+
+Generated caches, virtual environments, Python cache files, and local development artifacts are excluded from version control.
 
 ---
 
-## 30. Summary
+## 32. Summary
 
-The Intelligent Credit Advisory System demonstrates an end-to-end educational credit-advisory workflow built around four principles:
+The Intelligent Credit Advisory System demonstrates an end-to-end explainable credit-advisory workflow using:
 
-**Deterministic Decisions**  
-Financial calculations, risk scoring, and eligibility rules are implemented in Python rather than delegated to a language model.
+**Deterministic Financial Logic**  
+EMI, FOIR, risk analysis, and underwriting are performed using explicit Python rules.
 
-**Specialized Agents**  
-Different responsibilities are separated across Supervisor, Data Retrieval, Risk Analysis, Underwriting, Policy/RAG, and Explanation agents.
+**Multi-Agent Orchestration**  
+LangGraph coordinates Supervisor, Data Retrieval, Risk Analysis, Underwriting, Policy/RAG, and Explanation agents.
 
-**Grounded AI**  
-Gemini explains the completed assessment using retrieved policy context instead of independently making the lending decision.
+**Grounded Generative AI**  
+Gemini provides semantic embeddings and natural-language explanation using retrieved policy context.
 
-**Auditability**  
-Supervisor routing decisions and specialized-agent actions are recorded in an inspectable execution trail.
+**Persistent Data and Auditability**  
+PostgreSQL stores customer/product data, applications, policy vectors, and agent audit events.
 
-Together, these components provide a transparent prototype of a supervisor-routed, explainable, multi-agent credit advisory system.
+**Service-Oriented Architecture**  
+FastAPI separates the backend workflow from the Streamlit interface.
+
+**Caching**  
+Redis provides temporary assessment caching without replacing PostgreSQL as the system of record.
+
+Together, these components provide a transparent, auditable, supervisor-routed multi-agent prototype for intelligent credit advisory.

@@ -1,7 +1,22 @@
-import streamlit as st
+import os
 
-from engine.data_loader import load_customers, load_loan_products
-from agents.workflow import run_loan_advisory
+import httpx
+import streamlit as st
+from dotenv import load_dotenv
+
+
+# =========================================================
+# ENVIRONMENT CONFIGURATION
+# =========================================================
+
+load_dotenv()
+
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "http://127.0.0.1:8000",
+).rstrip("/")
+
+API_TIMEOUT_SECONDS = 120.0
 
 
 # =========================================================
@@ -11,7 +26,7 @@ from agents.workflow import run_loan_advisory
 st.set_page_config(
     page_title="Intelligent Credit Advisory System",
     page_icon="💳",
-    layout="wide"
+    layout="wide",
 )
 
 
@@ -24,15 +39,104 @@ if "workflow_result" not in st.session_state:
 
 
 # =========================================================
+# FASTAPI CLIENT FUNCTIONS
+# =========================================================
+
+@st.cache_data(ttl=60)
+def fetch_customers():
+    """
+    Retrieve customer data through the FastAPI service.
+
+    Streamlit does not access PostgreSQL directly.
+    """
+
+    response = httpx.get(
+        f"{API_BASE_URL}/customers",
+        timeout=10.0,
+    )
+
+    response.raise_for_status()
+
+    payload = response.json()
+
+    return payload["customers"]
+
+
+@st.cache_data(ttl=60)
+def fetch_loan_products():
+    """
+    Retrieve loan product data through the FastAPI service.
+
+    Streamlit does not access PostgreSQL directly.
+    """
+
+    response = httpx.get(
+        f"{API_BASE_URL}/loan-products",
+        timeout=10.0,
+    )
+
+    response.raise_for_status()
+
+    payload = response.json()
+
+    return payload["loan_products"]
+
+
+def submit_loan_assessment(
+    customer_id,
+    product_id,
+    requested_amount,
+    requested_tenure,
+):
+    """
+    Submit a loan assessment request to FastAPI.
+
+    FastAPI invokes the LangGraph workflow and handles
+    PostgreSQL persistence and Redis caching.
+    """
+
+    response = httpx.post(
+        f"{API_BASE_URL}/assess",
+        json={
+            "customer_id": customer_id,
+            "product_id": product_id,
+            "requested_amount": requested_amount,
+            "requested_tenure": requested_tenure,
+        },
+        timeout=API_TIMEOUT_SECONDS,
+    )
+
+    if response.is_error:
+
+        try:
+            error_payload = response.json()
+            error_detail = error_payload.get(
+                "detail",
+                "Unknown API error.",
+            )
+
+        except Exception:
+            error_detail = response.text
+
+        raise RuntimeError(
+            f"FastAPI returned HTTP "
+            f"{response.status_code}: "
+            f"{error_detail}"
+        )
+
+    return response.json()
+
+
+# =========================================================
 # HEADER
 # =========================================================
 
 st.title("💳 Intelligent Credit Advisory System")
 
 st.caption(
-    "LangGraph-orchestrated multi-agent loan eligibility, "
-    "affordability, risk analysis, policy retrieval and "
-    "AI-powered credit advisory."
+    "FastAPI-served, LangGraph-orchestrated multi-agent "
+    "loan eligibility, affordability, risk analysis, "
+    "policy retrieval and AI-powered credit advisory."
 )
 
 st.info(
@@ -47,60 +151,85 @@ st.info(
 # =========================================================
 
 with st.expander(
-    "View Multi-Agent Architecture",
-    expanded=False
+    "View System & Multi-Agent Architecture",
+    expanded=False,
 ):
+
     st.code(
         """
-                     Supervisor Agent
-                           |
-                           v
-                  Data Retrieval Agent
-                           |
-                           v
-                     Supervisor
-                           |
-                           v
-                   Risk Analysis Agent
-                           |
-                           v
-                     Supervisor
-                           |
-                           v
-             Underwriting Decision Agent
-                           |
-                           v
-                     Supervisor
-                           |
-                           v
-                   Policy / RAG Agent
-                           |
-                           v
-                     Supervisor
-                           |
-                           v
-                  Explanation Agent
-                           |
-                           v
-                     Supervisor
-                           |
-                           v
-                          END
+                    Streamlit User Interface
+                             |
+                             | HTTP
+                             v
+                         FastAPI
+                             |
+                             v
+                      Supervisor Agent
+                             |
+                             v
+                   Data Retrieval Agent
+                             |
+                             v
+                        Supervisor
+                             |
+                             v
+                     Risk Analysis Agent
+                             |
+                             v
+                        Supervisor
+                             |
+                             v
+                Underwriting Decision Agent
+                             |
+                             v
+                        Supervisor
+                             |
+                             v
+                     Policy / RAG Agent
+                             |
+                             v
+                        Supervisor
+                             |
+                             v
+                    Explanation Agent
+                             |
+                             v
+                        Supervisor
+                             |
+                             v
+                            END
+
+          PostgreSQL + pgvector     Redis Cache
+                   ^                    ^
+                   |                    |
+                   +------ FastAPI -----+
         """,
-        language="text"
+        language="text",
     )
 
     st.write(
-        "The workflow is orchestrated using LangGraph. "
-        "The Supervisor Agent inspects the shared workflow state "
-        "and conditionally routes execution to the appropriate "
-        "specialized agent."
+        "The Streamlit interface communicates with the backend "
+        "through FastAPI. Streamlit does not directly invoke the "
+        "LangGraph workflow or query PostgreSQL."
+    )
+
+    st.write(
+        "FastAPI invokes the LangGraph workflow. The Supervisor "
+        "Agent inspects the shared workflow state and conditionally "
+        "routes execution to the appropriate specialized agent."
     )
 
     st.write(
         "After each specialized agent completes its task, control "
         "returns to the Supervisor Agent. The Supervisor then "
         "determines which stage should execute next."
+    )
+
+    st.write(
+        "PostgreSQL acts as the persistent system of record for "
+        "customer, product, application and audit data. pgvector "
+        "supports semantic policy retrieval, while Redis provides "
+        "temporary caching of completed assessments."
     )
 
     st.write(
@@ -111,11 +240,72 @@ with st.expander(
 
 
 # =========================================================
-# LOAD DATA
+# LOAD DATA THROUGH FASTAPI
 # =========================================================
 
-customers = load_customers()
-products = load_loan_products()
+try:
+
+    customers = fetch_customers()
+    products = fetch_loan_products()
+
+except httpx.ConnectError:
+
+    st.error(
+        "The FastAPI backend is not running. "
+        "Start the FastAPI server and then refresh this page."
+    )
+
+    st.code(
+        r".\.venv\Scripts\python.exe -m uvicorn api.main:app --reload",
+        language="powershell",
+    )
+
+    st.stop()
+
+except httpx.TimeoutException:
+
+    st.error(
+        "The FastAPI backend did not respond within the expected "
+        "time. Please check that the backend is running correctly."
+    )
+
+    st.stop()
+
+except httpx.HTTPStatusError as error:
+
+    st.error(
+        "FastAPI could not provide the customer or loan product "
+        f"data. HTTP status: {error.response.status_code}"
+    )
+
+    st.stop()
+
+except Exception as error:
+
+    st.error(
+        "The application could not retrieve data from FastAPI: "
+        f"{error}"
+    )
+
+    st.stop()
+
+
+if not customers:
+
+    st.error(
+        "No customers were returned by the FastAPI service."
+    )
+
+    st.stop()
+
+
+if not products:
+
+    st.error(
+        "No loan products were returned by the FastAPI service."
+    )
+
+    st.stop()
 
 
 customer_options = {
@@ -142,7 +332,7 @@ with left_column:
 
     selected_customer_name = st.selectbox(
         "Select Customer",
-        options=list(customer_options.keys())
+        options=list(customer_options.keys()),
     )
 
     requested_amount = st.number_input(
@@ -150,7 +340,7 @@ with left_column:
         min_value=10000,
         max_value=5000000,
         value=500000,
-        step=10000
+        step=10000,
     )
 
 
@@ -158,7 +348,7 @@ with right_column:
 
     selected_product_name = st.selectbox(
         "Select Loan Product",
-        options=list(product_options.keys())
+        options=list(product_options.keys()),
     )
 
     requested_tenure = st.number_input(
@@ -166,7 +356,7 @@ with right_column:
         min_value=6,
         max_value=120,
         value=60,
-        step=6
+        step=6,
     )
 
 
@@ -209,6 +399,11 @@ with profile_column:
     st.subheader("Customer Profile")
 
     st.write(
+        f"**Customer ID:** "
+        f"{selected_customer['customer_id']}"
+    )
+
+    st.write(
         f"**Employment:** "
         f"{selected_customer['employment_type']}"
     )
@@ -242,6 +437,11 @@ with profile_column:
 with product_column:
 
     st.subheader("Loan Product Information")
+
+    st.write(
+        f"**Product ID:** "
+        f"{selected_product['product_id']}"
+    )
 
     st.write(
         f"**Interest Rate:** "
@@ -280,12 +480,12 @@ st.divider()
 run_button = st.button(
     "Run Multi-Agent Loan Assessment",
     type="primary",
-    use_container_width=True
+    use_container_width=True,
 )
 
 
 # =========================================================
-# RUN LANGGRAPH WORKFLOW
+# CALL FASTAPI ASSESSMENT ENDPOINT
 # =========================================================
 
 if run_button:
@@ -293,26 +493,48 @@ if run_button:
     try:
 
         with st.spinner(
-            "Running the supervisor-routed multi-agent "
-            "credit advisory workflow..."
+            "Sending the application to FastAPI and running "
+            "the supervisor-routed multi-agent credit "
+            "advisory workflow..."
         ):
 
-            workflow_result = run_loan_advisory(
+            workflow_result = submit_loan_assessment(
                 customer_id=selected_customer_id,
                 product_id=selected_product_id,
                 requested_amount=requested_amount,
-                requested_tenure=requested_tenure
+                requested_tenure=requested_tenure,
             )
 
-            st.session_state.workflow_result = workflow_result
+            st.session_state.workflow_result = (
+                workflow_result
+            )
+
+    except httpx.ConnectError:
+
+        st.session_state.workflow_result = None
+
+        st.error(
+            "The assessment could not be started because "
+            "the FastAPI backend is not running."
+        )
+
+    except httpx.TimeoutException:
+
+        st.session_state.workflow_result = None
+
+        st.error(
+            "The assessment request timed out. The AI explanation "
+            "or policy retrieval service may be taking longer than "
+            "expected. Please check the FastAPI terminal."
+        )
 
     except Exception as error:
 
         st.session_state.workflow_result = None
 
         st.error(
-            f"The multi-agent workflow could not be completed: "
-            f"{error}"
+            "The multi-agent workflow could not be completed "
+            f"through FastAPI: {error}"
         )
 
 
@@ -327,6 +549,17 @@ if result:
 
     st.header("Assessment Result")
 
+    application_id = result.get(
+        "application_id"
+    )
+
+    if application_id is not None:
+
+        st.caption(
+            f"Application ID: {application_id} | "
+            "Persisted in PostgreSQL"
+        )
+
     col1, col2, col3, col4 = st.columns(4)
 
 
@@ -334,7 +567,7 @@ if result:
 
         st.metric(
             "Estimated EMI",
-            f"₹{result['estimated_emi']:,.2f}"
+            f"₹{result['estimated_emi']:,.2f}",
         )
 
 
@@ -342,7 +575,7 @@ if result:
 
         st.metric(
             "FOIR",
-            f"{result['foir']:.2f}%"
+            f"{result['foir']:.2f}%",
         )
 
 
@@ -350,7 +583,7 @@ if result:
 
         st.metric(
             "Eligibility",
-            result["decision"]
+            result["decision"],
         )
 
 
@@ -358,7 +591,7 @@ if result:
 
         st.metric(
             "Risk Level",
-            result["risk_level"]
+            result["risk_level"],
         )
 
 
@@ -438,30 +671,81 @@ if result:
 
     with st.expander(
         "View Retrieved Policy Context",
-        expanded=False
+        expanded=False,
     ):
 
+        retrieved_policy = result.get(
+            "retrieved_policy",
+            [],
+        )
+
+        if not retrieved_policy:
+
+            st.info(
+                "No policy context was returned for this assessment."
+            )
+
         for index, policy_item in enumerate(
-            result["retrieved_policy"],
-            start=1
+            retrieved_policy,
+            start=1,
         ):
 
             st.markdown(
                 f"### Retrieved Policy Section {index}"
             )
 
-            st.write(
-                f"**Similarity Score:** "
-                f"{policy_item['similarity']:.4f}"
+            source_title = policy_item.get(
+                "source_title"
             )
 
+            source_type = policy_item.get(
+                "source_type"
+            )
+
+            source_url = policy_item.get(
+                "source_url"
+            )
+
+            if source_title:
+
+                st.write(
+                    f"**Source:** {source_title}"
+                )
+
+            if source_type:
+
+                st.write(
+                    f"**Source Type:** {source_type}"
+                )
+
+            if source_url:
+
+                st.write(
+                    f"**Reference URL:** {source_url}"
+                )
+
+            similarity = policy_item.get(
+                "similarity"
+            )
+
+            if similarity is not None:
+
+                st.write(
+                    f"**Similarity Score:** "
+                    f"{similarity:.4f}"
+                )
+
             st.write(
-                policy_item["text"]
+                policy_item.get(
+                    "text",
+                    "No policy text available.",
+                )
             )
 
             if index < len(
-                result["retrieved_policy"]
+                retrieved_policy
             ):
+
                 st.divider()
 
 
@@ -471,23 +755,31 @@ if result:
 
     st.divider()
 
-    st.header("Multi-Agent Execution & Audit Trail")
+    st.header(
+        "Multi-Agent Execution & Audit Trail"
+    )
 
     st.write(
         "The audit trail records both Supervisor routing decisions "
         "and the actions performed by each specialized agent during "
-        "the assessment."
+        "the assessment. These events are persisted in PostgreSQL."
+    )
+
+
+    audit_trail = result.get(
+        "audit_trail",
+        [],
     )
 
 
     for index, entry in enumerate(
-        result["audit_trail"],
-        start=1
+        audit_trail,
+        start=1,
     ):
 
         with st.expander(
             f"{index}. {entry['agent']}",
-            expanded=False
+            expanded=False,
         ):
 
             st.write(
@@ -496,7 +788,7 @@ if result:
 
             details = entry.get(
                 "details",
-                {}
+                {},
             )
 
             if details:
@@ -521,13 +813,13 @@ if result:
     completed_agents = list(
         dict.fromkeys(
             entry["agent"]
-            for entry in result["audit_trail"]
+            for entry in audit_trail
         )
     )
 
     st.success(
         f"Multi-agent workflow completed successfully "
-        f"across {len(completed_agents)} specialized agents."
+        f"across {len(completed_agents)} participating agents."
     )
 
     st.write(
@@ -537,7 +829,7 @@ if result:
     )
 
     st.caption(
-        f"{len(result['audit_trail'])} total workflow and "
+        f"{len(audit_trail)} total workflow and "
         f"routing events were recorded in the audit trail."
     )
 
@@ -550,6 +842,6 @@ st.divider()
 
 st.caption(
     "Intelligent Credit Advisory System | "
-    "LangGraph Multi-Agent Educational AI & "
-    "Financial Technology Prototype"
+    "Streamlit + FastAPI + LangGraph Multi-Agent "
+    "Educational AI & Financial Technology Prototype"
 )
